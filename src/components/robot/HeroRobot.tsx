@@ -1,15 +1,6 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
-import { Bot, Sparkles, ChevronRight } from 'lucide-react';
-import { RobotModel, RobotExpression } from './RobotModel';
-
-const GUIDE_MESSAGES = [
-  "Hi, welcome to the PrismFlow World. I'll guide you through this website.",
-  "We build intelligent digital experiences.",
-  "Explore what we can build for your business.",
-  "Want to see what we've created?",
-  "Ready to build something intelligent?",
-];
+import { RobotModel } from './RobotModel';
 
 export const HeroRobot: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -20,11 +11,6 @@ export const HeroRobot: React.FC = () => {
     return window.innerWidth >= 1024;
   });
 
-  const [showSpeechBubble, setShowSpeechBubble] = useState(false);
-  const [messageIndex, setMessageIndex] = useState(0);
-  const [robotMood, setRobotMood] = useState<RobotExpression>('smile');
-  const [isCursorNear, setIsCursorNear] = useState(false);
-
   // 1. Strictly Desktop-Only Guard
   useEffect(() => {
     const handleResize = () => {
@@ -34,27 +20,7 @@ export const HeroRobot: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // 2. Greeting Sequence on Home/Hero Entry
-  useEffect(() => {
-    if (!isDesktop) return;
-
-    // After 600ms: Speech bubble appears smoothly while robot waves cheerfully
-    const greetTimer = setTimeout(() => {
-      setShowSpeechBubble(true);
-    }, 600);
-
-    return () => {
-      clearTimeout(greetTimer);
-    };
-  }, [isDesktop]);
-
-  // Next guide message cycler
-  const handleNextMessage = useCallback((e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setMessageIndex((prev) => (prev + 1) % GUIDE_MESSAGES.length);
-  }, []);
-
-  // 3. Three.js Setup & Render Loop with 100% Transparent Background
+  // 2. Three.js Setup & Ultra-Smooth Render Loop
   useEffect(() => {
     if (!isDesktop) return;
     const container = containerRef.current;
@@ -63,29 +29,28 @@ export const HeroRobot: React.FC = () => {
     // Scene & Perspective Camera
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
-      35,
+      34,
       container.clientWidth / container.clientHeight,
       0.1,
       50
     );
-    // Camera framing matched to reference angle (slightly elevated, clear view of cute chibi character)
+    // Camera framing matched to reference image (front-facing, clear view of cute chibi character)
     camera.position.set(0, 0.42, 3.4);
 
-    // High-Quality WebGL Renderer (Zero background, 100% alpha transparency)
+    // High-Quality WebGL Renderer (100% transparent, zero background)
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
       antialias: true,
       powerPreference: 'high-performance',
     });
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
-    renderer.setClearColor(0x000000, 0); // 100% transparent background
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
+    renderer.setClearColor(0x000000, 0);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.25;
     container.appendChild(renderer.domElement);
 
     // Studio Lighting matching the 3D Reference Image
-    // Soft Hemisphere Light (Pure White top, Sky Blue bounce)
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x0ea5e9, 2.8);
     scene.add(hemiLight);
 
@@ -94,7 +59,7 @@ export const HeroRobot: React.FC = () => {
 
     // Crisp Front Key Light (Highlights glossy white helmet & royal blue visor)
     const keyLight = new THREE.DirectionalLight(0xffffff, 3.8);
-    keyLight.position.set(2.2, 3.8, 4.0);
+    keyLight.position.set(2.0, 3.8, 4.0);
     scene.add(keyLight);
 
     // Soft Cyan Fill Light
@@ -109,20 +74,17 @@ export const HeroRobot: React.FC = () => {
 
     // Construct Exact Robot Model matching Reference Image
     const robot = new RobotModel();
-    robot.root.scale.set(0.9, 0.9, 0.9);
-    robot.root.position.set(0, -0.22, 0);
-    robot.root.rotation.set(0.04, -0.15, 0.02);
+    robot.root.scale.set(0.92, 0.92, 0.92);
+    robot.root.position.set(0, -0.15, 0);
+    robot.root.rotation.set(0.04, -0.12, 0.02);
     scene.add(robot.root);
     robotRef.current = robot;
 
-    // Cursor tracking state
+    // Smooth Cursor Tracking state
     const cursorState = {
       normX: 0,
       normY: 0,
-      isNear: false,
     };
-
-    let leaveTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const handleMouseMove = (e: MouseEvent) => {
       const rect = container.getBoundingClientRect();
@@ -131,27 +93,9 @@ export const HeroRobot: React.FC = () => {
 
       const deltaX = e.clientX - centerX;
       const deltaY = e.clientY - centerY;
-      const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-      cursorState.normX = Math.max(-1, Math.min(1, deltaX / (window.innerWidth * 0.35)));
-      cursorState.normY = Math.max(-1, Math.min(1, deltaY / (window.innerHeight * 0.35)));
-
-      if (dist < 240) {
-        if (leaveTimeout) {
-          clearTimeout(leaveTimeout);
-          leaveTimeout = null;
-        }
-        cursorState.isNear = true;
-        setIsCursorNear(true);
-      } else {
-        if (!leaveTimeout) {
-          leaveTimeout = setTimeout(() => {
-            cursorState.isNear = false;
-            setIsCursorNear(false);
-            leaveTimeout = null;
-          }, 350);
-        }
-      }
+      cursorState.normX = Math.max(-1, Math.min(1, deltaX / (window.innerWidth * 0.4)));
+      cursorState.normY = Math.max(-1, Math.min(1, deltaY / (window.innerHeight * 0.4)));
     };
 
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
@@ -174,7 +118,8 @@ export const HeroRobot: React.FC = () => {
       const delta = Math.min(clock.getDelta(), 0.1);
       const time = clock.getElapsedTime();
 
-      robot.update(time, delta, robotMood, cursorState);
+      // Update robot with smooth, fluid animations
+      robot.update(time, delta, cursorState);
 
       renderer.render(scene, camera);
     };
@@ -198,80 +143,28 @@ export const HeroRobot: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('visibilitychange', handleVisibility);
-      if (leaveTimeout) clearTimeout(leaveTimeout);
       robot.dispose();
       renderer.dispose();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
     };
-  }, [isDesktop, robotMood]);
+  }, [isDesktop]);
 
   if (!isDesktop) {
     return null;
   }
 
   return (
-    <div className="relative w-full max-w-[290px] lg:max-w-[320px] xl:max-w-[350px] h-[390px] xl:h-[430px] flex flex-col items-center justify-end select-none pointer-events-none box-border">
+    <div className="relative w-full max-w-[290px] lg:max-w-[320px] xl:max-w-[350px] h-[380px] xl:h-[420px] flex flex-col items-center justify-center select-none pointer-events-none box-border">
       
-      {/* Subtle Backlight Atmospheric Glow */}
+      {/* Subtle Backlight Atmospheric Glow for Depth */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] bg-gradient-to-tr from-[#0077B6]/20 via-[#18B8C4]/15 to-transparent rounded-full blur-[70px] pointer-events-none -z-10" />
 
-      {/* Small, Cute, Elegant Floating Speech Bubble */}
-      <div
-        className={`absolute top-2 left-1/2 -translate-x-1/2 w-[90%] max-w-[280px] transition-all duration-600 transform pointer-events-auto z-30 box-border ${
-          showSpeechBubble
-            ? 'opacity-100 translate-y-0 scale-100'
-            : 'opacity-0 -translate-y-3 scale-95'
-        }`}
-      >
-        <div 
-          onClick={() => handleNextMessage()}
-          className="group relative px-3.5 py-3 rounded-2xl bg-[#0A131F]/92 backdrop-blur-xl border border-white/18 shadow-[0_12px_36px_rgba(0,119,182,0.25)] flex items-start gap-2.5 box-border cursor-pointer hover:border-cyan-highlight/40 transition-colors"
-          title="Click to hear more from PrismFlow AI"
-        >
-          {/* Cute Mini Avatar Icon */}
-          <div className="relative mt-0.5 shrink-0 flex items-center justify-center">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#0077B6]/40 to-[#18B8C4]/30 border border-[#3DD6DE]/40 flex items-center justify-center">
-              {isCursorNear ? (
-                <Sparkles size={13} className="text-[#3DD6DE] animate-pulse" />
-              ) : (
-                <Bot size={14} className="text-[#38BDF8]" />
-              )}
-            </div>
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#00E5FF] ring-2 ring-[#0A131F] animate-ping" />
-          </div>
-
-          {/* Dialogue Text */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#3DD6DE]">
-                  PrismFlow AI
-                </span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-white/[0.08] text-slate-300 font-medium">
-                  {isCursorNear ? 'Happy' : 'Guide'}
-                </span>
-              </div>
-              <ChevronRight size={12} className="text-text-muted group-hover:text-cyan-highlight group-hover:translate-x-0.5 transition-all" />
-            </div>
-
-            <p className="text-xs font-medium text-[#F0F5FA] leading-snug break-words whitespace-normal">
-              "{GUIDE_MESSAGES[messageIndex]}"
-            </p>
-          </div>
-
-          {/* Cute Little Downward Pointer Arrow */}
-          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0A131F] border-b border-r border-white/18 rotate-45" />
-        </div>
-      </div>
-
-      {/* 3D WebGL Canvas Viewport (100% transparent, no background, clickable to interact) */}
+      {/* 3D WebGL Canvas Viewport (Zero speech bubble, zero guide tags, 100% smooth 3D character) */}
       <div
         ref={containerRef}
-        onClick={() => handleNextMessage()}
-        className="w-full h-full pointer-events-auto cursor-pointer flex items-center justify-center"
-        title="PrismFlow AI Guide - Click to interact"
+        className="w-full h-full pointer-events-auto cursor-default flex items-center justify-center"
       />
     </div>
   );

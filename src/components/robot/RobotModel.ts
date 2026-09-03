@@ -1,7 +1,5 @@
 import * as THREE from 'three';
 
-export type RobotExpression = 'idle' | 'greet' | 'smile' | 'curious';
-
 export class RobotModel {
   public root: THREE.Group;
   public headGroup: THREE.Group;
@@ -17,10 +15,9 @@ export class RobotModel {
   private visorTexture: THREE.CanvasTexture;
   private visorMaterial: THREE.MeshStandardMaterial;
 
-  private currentExpression: RobotExpression = 'smile';
   private blinkProgress: number = 0;
   private isBlinking: boolean = false;
-  private nextBlinkTime: number = 2.5;
+  private nextBlinkTime: number = 3.0;
 
   private targetHeadRotY: number = 0;
   private targetHeadRotX: number = 0;
@@ -29,7 +26,7 @@ export class RobotModel {
   constructor() {
     this.root = new THREE.Group();
 
-    // 1. Dynamic Visor Canvas for Royal Blue Glass Screen + Glowing Cyan Eyes
+    // 1. Dynamic Visor Canvas for Royal Blue Glass Screen + Glowing Cyan Smiling Eyes
     this.visorCanvas = document.createElement('canvas');
     this.visorCanvas.width = 512;
     this.visorCanvas.height = 256;
@@ -81,7 +78,7 @@ export class RobotModel {
     this.headGroup = new THREE.Group();
     this.headGroup.position.set(0, 0.68, 0);
 
-    // Main Smooth Rounded White Head Sphere (slight flatten in front Z so visor is completely proud)
+    // Main Smooth Rounded White Head Sphere
     const headGeo = new THREE.SphereGeometry(0.54, 36, 36);
     headGeo.scale(1.06, 0.98, 0.92);
     const headMesh = new THREE.Mesh(headGeo, whiteBodyMat);
@@ -115,11 +112,10 @@ export class RobotModel {
     uv.needsUpdate = true;
 
     this.visorMesh = new THREE.Mesh(visorGeo, this.visorMaterial);
-    // Positioned at z = 0.22 so its apex reaches z = 0.60, proudly in front of the white head (0.49)
     this.visorMesh.position.set(0, 0.02, 0.22);
     this.headGroup.add(this.visorMesh);
 
-    // Subtle Neon Cyan Border Ring around Visor (Highlights visor contour)
+    // Subtle Neon Cyan Border Ring around Visor
     const borderGeo = new THREE.TorusGeometry(0.44, 0.016, 16, 48);
     borderGeo.scale(1.02, 0.8, 1.0);
     const borderMesh = new THREE.Mesh(borderGeo, neonCyanBorderMat);
@@ -214,12 +210,12 @@ export class RobotModel {
     this.rightArm.rotation.set(-0.1, 0, -0.72);
     this.root.add(this.rightArm);
 
-    // Initial Face Render
-    this.drawVisorFace(this.currentExpression, 0, 0);
+    // Initial Face Render (Clean, serene, cute smiling crescent eyes)
+    this.drawVisorFace(0, 0);
   }
 
-  // Draw Cute Glowing Cyan Arc Eyes Inside Royal Blue Visor
-  private drawVisorFace(expression: RobotExpression, pupilX: number, pupilY: number) {
+  // Draw Signature Glowing Cyan Smiling Arc Eyes from Reference Image
+  private drawVisorFace(pupilX: number, pupilY: number) {
     const ctx = this.visorCtx;
     const w = this.visorCanvas.width;
     const h = this.visorCanvas.height;
@@ -235,7 +231,7 @@ export class RobotModel {
     const blueGlow = '#38BDF8';
 
     ctx.shadowColor = blueGlow;
-    ctx.shadowBlur = 28;
+    ctx.shadowBlur = 30;
     ctx.fillStyle = eyeColor;
     ctx.strokeStyle = eyeColor;
     ctx.lineWidth = 18;
@@ -250,25 +246,9 @@ export class RobotModel {
     ctx.save();
     ctx.translate(0, (1 - blinkScale) * eyeCenterY * 0.35);
 
-    switch (expression) {
-      case 'curious': {
-        // Curious rounded eyes tracking cursor
-        const pX = pupilX * 14;
-        const pY = pupilY * 10;
-        this.drawRoundEye(ctx, leftEyeX + pX, eyeCenterY + pY, 28, 28 * blinkScale);
-        this.drawRoundEye(ctx, rightEyeX + pX, eyeCenterY + pY, 28, 28 * blinkScale);
-        break;
-      }
-
-      case 'smile':
-      case 'greet':
-      case 'idle':
-      default:
-        // Signature Cute Glowing Cyan Crescent Arcs ^ ^ (Exact match to reference image!)
-        this.drawSmilingEyeArc(ctx, leftEyeX + pupilX * 6, eyeCenterY + pupilY * 4, blinkScale);
-        this.drawSmilingEyeArc(ctx, rightEyeX + pupilX * 6, eyeCenterY + pupilY * 4, blinkScale);
-        break;
-    }
+    // Iconic Happy Crescent Eyes (^ ^) matching reference image perfectly
+    this.drawSmilingEyeArc(ctx, leftEyeX + pupilX * 6, eyeCenterY + pupilY * 4, blinkScale);
+    this.drawSmilingEyeArc(ctx, rightEyeX + pupilX * 6, eyeCenterY + pupilY * 4, blinkScale);
 
     ctx.restore();
     this.visorTexture.needsUpdate = true;
@@ -276,101 +256,76 @@ export class RobotModel {
 
   // Draw the iconic happy curved eye arcs from image
   private drawSmilingEyeArc(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
-    if (scale <= 0.1) return;
+    if (scale <= 0.08) {
+      // Clean micro slit on blink
+      ctx.beginPath();
+      ctx.moveTo(x - 22, y);
+      ctx.lineTo(x + 22, y);
+      ctx.stroke();
+      return;
+    }
     ctx.beginPath();
     ctx.arc(x, y + 8, 30, Math.PI * 1.15, Math.PI * 1.85, false);
     ctx.stroke();
   }
 
-  private drawRoundEye(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    radiusX: number,
-    radiusY: number
-  ) {
-    if (radiusY <= 2) {
-      ctx.beginPath();
-      ctx.moveTo(x - radiusX, y);
-      ctx.lineTo(x + radiusX, y);
-      ctx.stroke();
-      return;
-    }
-    ctx.beginPath();
-    ctx.ellipse(x, y, radiusX, radiusY, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // White pupil sparkle
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath();
-    ctx.arc(x + radiusX * 0.3, y - radiusY * 0.3, radiusX * 0.28, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#00F5FF';
-  }
-
-  // Master Subtle Frame Update Loop (Floating bobbing, gentle wave, cursor tracking)
+  // Master Ultra-Smooth Frame Animation Loop (Silky harmonic physics)
   public update(
     time: number,
     delta: number,
-    activeExpression: RobotExpression,
-    cursor: { normX: number; normY: number; isNear: boolean }
+    cursor: { normX: number; normY: number }
   ) {
-    const effectiveExpression: RobotExpression = cursor.isNear ? 'greet' : activeExpression;
-
-    // Periodic natural blinking
+    // 1. Smooth, Natural Periodic Blinking
     if (!this.isBlinking && time > this.nextBlinkTime) {
       this.isBlinking = true;
       this.blinkProgress = 0;
     }
 
     if (this.isBlinking) {
-      this.blinkProgress += delta * 8.0;
+      this.blinkProgress += delta * 7.5;
       if (this.blinkProgress >= 1) {
         this.blinkProgress = 0;
         this.isBlinking = false;
-        this.nextBlinkTime = time + 3.0 + Math.random() * 3.5;
+        this.nextBlinkTime = time + 3.2 + Math.random() * 3.5;
       }
     }
 
-    // Natural, subtle head turn toward the cursor / screen content
-    // Note: When cursor is to the left (normX < 0), targetHeadRotY must be negative to turn left
-    // When cursor is above (normY < 0), targetHeadRotX must be negative to tilt up
-    if (cursor.isNear) {
-      this.targetHeadRotY = cursor.normX * 0.45;
-      this.targetHeadRotX = cursor.normY * 0.22;
-      this.targetHeadRotZ = cursor.normX * 0.08;
-    } else {
-      this.targetHeadRotY = cursor.normX * 0.2 + Math.sin(time * 0.6) * 0.04;
-      this.targetHeadRotX = cursor.normY * 0.12 + Math.cos(time * 0.5) * 0.03;
-      this.targetHeadRotZ = Math.sin(time * 0.4) * 0.02;
-    }
+    // 2. Ultra-Smooth Fluid Cursor Tracking (Gentle, organic follow without jerky jumps)
+    this.targetHeadRotY = cursor.normX * 0.38 + Math.sin(time * 0.7) * 0.03;
+    this.targetHeadRotX = cursor.normY * 0.2 + Math.cos(time * 0.6) * 0.02;
+    this.targetHeadRotZ = cursor.normX * 0.06 + Math.sin(time * 0.5) * 0.015;
 
-    const lerpFactor = 0.07;
+    // Smooth exponential damping factor (0.045 for silky fluid motion)
+    const lerpFactor = 0.045;
     this.headGroup.rotation.y += (this.targetHeadRotY - this.headGroup.rotation.y) * lerpFactor;
     this.headGroup.rotation.x += (this.targetHeadRotX - this.headGroup.rotation.x) * lerpFactor;
     this.headGroup.rotation.z += (this.targetHeadRotZ - this.headGroup.rotation.z) * lerpFactor;
 
-    // Redraw Visor Face
-    this.currentExpression = effectiveExpression;
-    this.drawVisorFace(this.currentExpression, cursor.normX, cursor.normY);
+    // Redraw Visor Face smoothly
+    this.drawVisorFace(cursor.normX, cursor.normY);
 
-    // Smooth floating physics for the cute floating pod
-    const floatY = Math.sin(time * 1.6) * 0.032;
-    const breatheY = Math.cos(time * 1.2) * 0.012;
+    // 3. Smooth Harmonic Floating Physics for the Body Pod
+    const floatY = Math.sin(time * 1.5) * 0.032;
+    const breathe = Math.cos(time * 1.2) * 0.012;
+    const bodyTilt = Math.sin(time * 0.8) * 0.015;
 
-    this.headGroup.position.y = 0.68 + floatY * 0.85;
-    this.bodyGroup.position.y = 0.12 + floatY * 0.45 + breatheY;
+    this.headGroup.position.y = 0.68 + floatY * 0.8;
+    this.bodyGroup.position.y = 0.12 + floatY * 0.45 + breathe;
+    this.bodyGroup.rotation.z = bodyTilt;
 
-    // Cheerful, gentle arm wave (Right arm waving at visitor, exactly like reference image!)
-    const waveSpeed = cursor.isNear ? 4.5 : 2.5;
-    const waveAmplitude = cursor.isNear ? 0.12 : 0.06;
+    // 4. Silky Smooth Arm Waves
+    // Right Arm: Continuous gentle, cheerful wave
+    const waveSin = Math.sin(time * 2.2);
+    const waveCos = Math.cos(time * 1.8);
     this.rightArm.position.y = 0.25 + floatY * 0.5;
-    this.rightArm.rotation.z = -0.72 + Math.sin(time * waveSpeed) * waveAmplitude;
+    this.rightArm.rotation.z = -0.72 + waveSin * 0.08;
+    this.rightArm.rotation.x = -0.1 + waveCos * 0.04;
+    this.rightArm.rotation.y = waveSin * 0.03;
 
-    // Left arm gentle resting sway
-    const leftArmSway = Math.sin(time * 1.6) * 0.02;
+    // Left Arm: Gentle resting floating sway
+    const leftArmSway = Math.sin(time * 1.5) * 0.02;
     this.leftArm.position.y = 0.22 + floatY * 0.45 - leftArmSway;
-    this.leftArm.rotation.z = 0.42 + Math.cos(time * 1.4) * 0.015;
+    this.leftArm.rotation.z = 0.42 + Math.cos(time * 1.3) * 0.02;
   }
 
   public dispose() {
