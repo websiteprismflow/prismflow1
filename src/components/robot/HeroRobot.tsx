@@ -161,7 +161,20 @@ export const HeroRobot: React.FC = () => {
       {/* Subtle Backlight Atmospheric Glow for Depth */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] bg-gradient-to-tr from-[#0077B6]/20 via-[#18B8C4]/15 to-transparent rounded-full blur-[70px] pointer-events-none -z-10" />
 
-      {/* 3D WebGL Canvas Viewport (Zero speech bubble, zero guide tags, 100% smooth 3D character) */}
+      {/* Elegant Minimalist Welcome Pill */}
+      <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap">
+        <div className="px-3.5 py-1.5 rounded-full bg-[#0A1422]/88 backdrop-blur-md border border-white/15 shadow-[0_8px_24px_rgba(0,180,216,0.2)] flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00F0FF] opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00F0FF]" />
+          </span>
+          <span className="text-xs font-medium text-slate-100 tracking-tight">
+            Hi, welcome to PrismFlow World 👋
+          </span>
+        </div>
+      </div>
+
+      {/* 3D WebGL Canvas Viewport */}
       <div
         ref={containerRef}
         className="w-full h-full pointer-events-auto cursor-default flex items-center justify-center"
