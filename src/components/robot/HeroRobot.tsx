@@ -22,7 +22,7 @@ export const HeroRobot: React.FC = () => {
 
   const [showSpeechBubble, setShowSpeechBubble] = useState(false);
   const [messageIndex, setMessageIndex] = useState(0);
-  const [robotMood, setRobotMood] = useState<RobotExpression>('idle');
+  const [robotMood, setRobotMood] = useState<RobotExpression>('smile');
   const [isCursorNear, setIsCursorNear] = useState(false);
 
   // 1. Strictly Desktop-Only Guard
@@ -38,20 +38,13 @@ export const HeroRobot: React.FC = () => {
   useEffect(() => {
     if (!isDesktop) return;
 
-    // After 600ms: Robot looks toward visitor, smiles, and greeting bubble appears smoothly
+    // After 600ms: Speech bubble appears smoothly while robot waves cheerfully
     const greetTimer = setTimeout(() => {
-      setRobotMood('greet');
       setShowSpeechBubble(true);
     }, 600);
 
-    // After 7s: Returns to calm idle state while speech bubble remains cleanly
-    const idleReturnTimer = setTimeout(() => {
-      setRobotMood('idle');
-    }, 7000);
-
     return () => {
       clearTimeout(greetTimer);
-      clearTimeout(idleReturnTimer);
     };
   }, [isDesktop]);
 
@@ -59,13 +52,9 @@ export const HeroRobot: React.FC = () => {
   const handleNextMessage = useCallback((e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setMessageIndex((prev) => (prev + 1) % GUIDE_MESSAGES.length);
-    setRobotMood('excited');
-    setTimeout(() => {
-      setRobotMood('idle');
-    }, 1800);
   }, []);
 
-  // 3. Three.js Compact, Cute Setup & Render Loop
+  // 3. Three.js Setup & Render Loop with 100% Transparent Background
   useEffect(() => {
     if (!isDesktop) return;
     const container = containerRef.current;
@@ -79,10 +68,10 @@ export const HeroRobot: React.FC = () => {
       0.1,
       50
     );
-    // Camera framing shows the complete cute character from head to feet
-    camera.position.set(0, 0.45, 3.8);
+    // Camera framing matched to reference angle (slightly elevated, clear view of cute chibi character)
+    camera.position.set(0, 0.42, 3.4);
 
-    // WebGL Renderer
+    // High-Quality WebGL Renderer (Zero background, 100% alpha transparency)
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
       antialias: true,
@@ -90,38 +79,39 @@ export const HeroRobot: React.FC = () => {
     });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    renderer.setClearColor(0x000000, 0); // 100% transparent background
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.22;
+    renderer.toneMappingExposure = 1.2;
     container.appendChild(renderer.domElement);
 
-    // Soft, Realistic Studio Lighting (Bright, approachable & clearly visible)
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x1e3a8a, 2.6);
+    // Studio Lighting matching the 3D Reference Image
+    // Soft Hemisphere Light (Pure White top, Sky Blue bounce)
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x0ea5e9, 2.8);
     scene.add(hemiLight);
 
-    const ambientLight = new THREE.AmbientLight(0x22354c, 1.8);
+    const ambientLight = new THREE.AmbientLight(0x22354c, 1.6);
     scene.add(ambientLight);
 
-    // Front Key Light (Soft illumination on face, eyes & body)
-    const keyLight = new THREE.DirectionalLight(0xffffff, 3.6);
-    keyLight.position.set(2.5, 3.8, 4.0);
+    // Crisp Front Key Light (Highlights glossy white helmet & royal blue visor)
+    const keyLight = new THREE.DirectionalLight(0xffffff, 3.8);
+    keyLight.position.set(2.2, 3.8, 4.0);
     scene.add(keyLight);
 
-    // Soft Sky Blue Fill Light
-    const fillLight = new THREE.DirectionalLight(0x38bdf8, 2.4);
-    fillLight.position.set(-3.0, -0.5, 3.0);
+    // Soft Cyan Fill Light
+    const fillLight = new THREE.DirectionalLight(0x06b6d4, 2.6);
+    fillLight.position.set(-3.2, -0.5, 3.2);
     scene.add(fillLight);
 
-    // Soft Cyan Rim Light (Accentuates the cute rounded silhouette against dark background)
-    const rimLight = new THREE.DirectionalLight(0x00f0ff, 3.8);
-    rimLight.position.set(0, 4.0, -3.0);
+    // Sky Blue Rim Light (Outlines the white rounded silhouette)
+    const rimLight = new THREE.DirectionalLight(0x38bdf8, 3.6);
+    rimLight.position.set(0, 4.2, -3.2);
     scene.add(rimLight);
 
-    // Construct Complete Cute Robot Model
+    // Construct Exact Robot Model matching Reference Image
     const robot = new RobotModel();
-    // Compact scale for an adorable companion occupying ~18% of Hero space
-    robot.root.scale.set(0.85, 0.85, 0.85);
-    robot.root.position.set(0, -0.28, 0);
-    robot.root.rotation.set(0.04, -0.15, 0);
+    robot.root.scale.set(0.9, 0.9, 0.9);
+    robot.root.position.set(0, -0.22, 0);
+    robot.root.rotation.set(0.04, -0.15, 0.02);
     scene.add(robot.root);
     robotRef.current = robot;
 
@@ -184,8 +174,7 @@ export const HeroRobot: React.FC = () => {
       const delta = Math.min(clock.getDelta(), 0.1);
       const time = clock.getElapsedTime();
 
-      const activeMood: RobotExpression = cursorState.isNear ? 'smile' : robotMood;
-      robot.update(time, delta, activeMood, cursorState);
+      robot.update(time, delta, robotMood, cursorState);
 
       renderer.render(scene, camera);
     };
@@ -223,7 +212,7 @@ export const HeroRobot: React.FC = () => {
   }
 
   return (
-    <div className="relative w-full max-w-[280px] lg:max-w-[320px] xl:max-w-[350px] h-[400px] xl:h-[440px] flex flex-col items-center justify-end select-none pointer-events-none box-border">
+    <div className="relative w-full max-w-[290px] lg:max-w-[320px] xl:max-w-[350px] h-[390px] xl:h-[430px] flex flex-col items-center justify-end select-none pointer-events-none box-border">
       
       {/* Subtle Backlight Atmospheric Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] bg-gradient-to-tr from-[#0077B6]/20 via-[#18B8C4]/15 to-transparent rounded-full blur-[70px] pointer-events-none -z-10" />
@@ -277,7 +266,7 @@ export const HeroRobot: React.FC = () => {
         </div>
       </div>
 
-      {/* 3D WebGL Canvas Viewport (Clickable to interact) */}
+      {/* 3D WebGL Canvas Viewport (100% transparent, no background, clickable to interact) */}
       <div
         ref={containerRef}
         onClick={() => handleNextMessage()}
