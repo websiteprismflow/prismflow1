@@ -29,16 +29,16 @@ export const HeroRobot: React.FC = () => {
   useEffect(() => {
     if (!isDesktop) return;
 
-    // After 600ms: Robot smiles and greeting bubble appears smoothly
+    // After 700ms: Robot smiles and friendly compact greeting bubble appears
     const greetTimer = setTimeout(() => {
       setRobotMood('greet');
       setShowSpeechBubble(true);
-    }, 600);
+    }, 700);
 
-    // After 6.5s: Returns to calm idle state while speech bubble remains cleanly
+    // After 7s: Returns to calm idle state while speech bubble remains cleanly
     const idleReturnTimer = setTimeout(() => {
       setRobotMood('idle');
-    }, 6500);
+    }, 7000);
 
     return () => {
       clearTimeout(greetTimer);
@@ -46,7 +46,7 @@ export const HeroRobot: React.FC = () => {
     };
   }, [isDesktop]);
 
-  // 3. Three.js High-Visibility Setup & Render Loop
+  // 3. Three.js Compact, Cute Setup & Render Loop
   useEffect(() => {
     if (!isDesktop) return;
     const container = containerRef.current;
@@ -55,13 +55,13 @@ export const HeroRobot: React.FC = () => {
     // Scene & Perspective Camera
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
-      36,
+      35,
       container.clientWidth / container.clientHeight,
       0.1,
       50
     );
-    // Camera closer to make robot prominent & clearly visible (occupying ~35% Hero visual area)
-    camera.position.set(0, 0.42, 3.2);
+    // Adjusted camera distance for a cute, compact supporting character
+    camera.position.set(0, 0.42, 3.8);
 
     // WebGL Renderer
     const renderer = new THREE.WebGLRenderer({
@@ -72,39 +72,37 @@ export const HeroRobot: React.FC = () => {
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.25;
+    renderer.toneMappingExposure = 1.2;
     container.appendChild(renderer.domElement);
 
-    // Realistic High-Contrast Lighting Setup (Ensures 100% visibility)
-    // 1. Hemisphere light prevents any dark shadows
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x1e3a8a, 2.8);
+    // Soft, Realistic Studio Lighting (Bright, approachable & clearly visible)
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x1e3a8a, 2.6);
     scene.add(hemiLight);
 
-    // 2. Ambient light for general illumination
-    const ambientLight = new THREE.AmbientLight(0x2a3e5c, 2.0);
+    const ambientLight = new THREE.AmbientLight(0x22354c, 1.8);
     scene.add(ambientLight);
 
-    // 3. Front Key Light (Pure white light directly on robot face and chest armor)
-    const keyLight = new THREE.DirectionalLight(0xffffff, 4.0);
-    keyLight.position.set(2.5, 4, 4.5);
+    // Front Key Light
+    const keyLight = new THREE.DirectionalLight(0xffffff, 3.6);
+    keyLight.position.set(2.5, 3.8, 4.0);
     scene.add(keyLight);
 
-    // 4. Fill Light (Soft Royal Sky Blue)
-    const fillLight = new THREE.DirectionalLight(0x60a5fa, 3.0);
-    fillLight.position.set(-3.5, 0, 3.5);
+    // Soft Sky Blue Fill Light
+    const fillLight = new THREE.DirectionalLight(0x38bdf8, 2.4);
+    fillLight.position.set(-3.0, -0.5, 3.0);
     scene.add(fillLight);
 
-    // 5. Sharp Cyan Rim / Silhouette Light (Creates crisp contrast against dark hero background)
-    const rimLight = new THREE.DirectionalLight(0x00f0ff, 4.5);
-    rimLight.position.set(0, 4.5, -3);
+    // Soft Cyan Rim Light (Accentuates the cute rounded silhouette against dark background)
+    const rimLight = new THREE.DirectionalLight(0x00f0ff, 3.8);
+    rimLight.position.set(0, 4.0, -3.0);
     scene.add(rimLight);
 
-    // Construct Luminous Silver/Navy Robot Model
+    // Construct Cute Mini Robot Model
     const robot = new RobotModel();
-    // Scaled up to occupy 30–40% of available hero visual area
-    robot.root.scale.set(1.28, 1.28, 1.28);
-    robot.root.position.set(0, -0.26, 0);
-    robot.root.rotation.set(0.04, -0.18, 0);
+    // Compact scale for an adorable companion occupying ~18% of Hero space
+    robot.root.scale.set(0.88, 0.88, 0.88);
+    robot.root.position.set(0, -0.22, 0);
+    robot.root.rotation.set(0.04, -0.15, 0);
     scene.add(robot.root);
     robotRef.current = robot;
 
@@ -129,7 +127,7 @@ export const HeroRobot: React.FC = () => {
       cursorState.normX = Math.max(-1, Math.min(1, deltaX / (window.innerWidth * 0.35)));
       cursorState.normY = Math.max(-1, Math.min(1, deltaY / (window.innerHeight * 0.35)));
 
-      if (dist < 280) {
+      if (dist < 240) {
         if (leaveTimeout) {
           clearTimeout(leaveTimeout);
           leaveTimeout = null;
@@ -167,7 +165,6 @@ export const HeroRobot: React.FC = () => {
       const delta = Math.min(clock.getDelta(), 0.1);
       const time = clock.getElapsedTime();
 
-      // Current mood priority: hover smile > active mood
       const activeMood: RobotExpression = cursorState.isNear ? 'smile' : robotMood;
       robot.update(time, delta, activeMood, cursorState);
 
@@ -207,51 +204,51 @@ export const HeroRobot: React.FC = () => {
   }
 
   return (
-    <div className="relative w-full max-w-[420px] lg:max-w-[460px] xl:max-w-[500px] h-[520px] xl:h-[560px] flex flex-col items-center justify-end select-none pointer-events-none box-border">
+    <div className="relative w-full max-w-[290px] lg:max-w-[330px] xl:max-w-[360px] h-[390px] xl:h-[430px] flex flex-col items-center justify-end select-none pointer-events-none box-border">
       
-      {/* Subtle Backlight Atmospheric Glow for the Robot */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] bg-gradient-to-tr from-[#0077B6]/25 via-[#18B8C4]/20 to-transparent rounded-full blur-[90px] pointer-events-none -z-10" />
+      {/* Subtle Backlight Atmospheric Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] bg-gradient-to-tr from-[#0077B6]/20 via-[#18B8C4]/15 to-transparent rounded-full blur-[70px] pointer-events-none -z-10" />
 
-      {/* Floating Greeting Speech Bubble (Anchored on top, never clipped, zero negative margins) */}
+      {/* Small, Cute, Elegant Floating Speech Bubble */}
       <div
-        className={`absolute top-2 left-1/2 -translate-x-1/2 w-[92%] max-w-[340px] transition-all duration-700 transform pointer-events-auto z-30 box-border ${
+        className={`absolute top-2 left-1/2 -translate-x-1/2 w-[90%] max-w-[290px] transition-all duration-600 transform pointer-events-auto z-30 box-border ${
           showSpeechBubble
             ? 'opacity-100 translate-y-0 scale-100'
-            : 'opacity-0 -translate-y-4 scale-95'
+            : 'opacity-0 -translate-y-3 scale-95'
         }`}
       >
-        <div className="relative p-3.5 sm:p-4 rounded-2xl bg-[#0B141E]/95 backdrop-blur-xl border border-white/20 shadow-[0_16px_48px_rgba(0,119,182,0.35)] flex items-start gap-3 box-border">
+        <div className="relative px-3.5 py-3 rounded-2xl bg-[#0A131F]/90 backdrop-blur-xl border border-white/15 shadow-[0_12px_36px_rgba(0,119,182,0.25)] flex items-start gap-2.5 box-border">
           
-          {/* Avatar Icon with Pulsing Cyan Beacon */}
+          {/* Cute Mini Avatar Icon */}
           <div className="relative mt-0.5 shrink-0 flex items-center justify-center">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#0077B6]/50 to-[#18B8C4]/40 border border-[#3DD6DE]/50 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#0077B6]/40 to-[#18B8C4]/30 border border-[#3DD6DE]/40 flex items-center justify-center">
               {isCursorNear ? (
-                <Sparkles size={15} className="text-[#3DD6DE] animate-pulse" />
+                <Sparkles size={13} className="text-[#3DD6DE] animate-pulse" />
               ) : (
-                <Bot size={16} className="text-[#38BDF8]" />
+                <Bot size={14} className="text-[#38BDF8]" />
               )}
             </div>
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#00E5FF] ring-2 ring-[#0B141E] animate-ping" />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#00E5FF] ring-2 ring-[#0A131F] animate-ping" />
           </div>
 
-          {/* Dialogue Text with Safe Multi-Line Wrapping */}
+          {/* Dialogue Text */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#3DD6DE]">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#3DD6DE]">
                 PrismFlow AI
               </span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/[0.1] text-slate-200 font-medium">
-                {isCursorNear ? 'Happy' : 'Assistant'}
+              <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-white/[0.08] text-slate-300 font-medium">
+                {isCursorNear ? 'Happy' : 'Guide'}
               </span>
             </div>
 
-            <p className="text-xs sm:text-sm font-semibold text-[#F5F7FA] leading-snug break-words whitespace-normal">
-              "Hi, welcome to the PrismFlow World. I'll guide you through this website."
+            <p className="text-xs font-medium text-[#F0F5FA] leading-snug break-words whitespace-normal">
+              "Hi! Welcome to the PrismFlow World. I'll guide you through this website."
             </p>
           </div>
 
-          {/* Pointing triangle pointer pointing toward the robot below */}
-          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-[#0B141E] border-b border-r border-white/20 rotate-45" />
+          {/* Cute Little Downward Pointer Arrow */}
+          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0A131F] border-b border-r border-white/15 rotate-45" />
         </div>
       </div>
 

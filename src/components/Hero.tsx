@@ -88,8 +88,8 @@ export const Hero: React.FC<HeroProps> = ({ onExploreWork, onContactClick }) => 
 
           </div>
 
-          {/* High-Contrast Silver & Deep Navy 3D AI Robot (Desktop Only, Contained in Hero) */}
-          <div className="hidden lg:flex items-center justify-center shrink-0 lg:w-[380px] xl:w-[460px] 2xl:w-[500px] z-10">
+          {/* Cute, Compact 3D AI Robot Companion (Desktop Only, Contained in Hero) */}
+          <div className="hidden lg:flex items-center justify-center shrink-0 lg:w-[320px] xl:w-[380px] 2xl:w-[420px] z-10">
             <HeroRobot />
           </div>
 
