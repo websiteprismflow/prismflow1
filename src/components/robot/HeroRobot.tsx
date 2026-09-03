@@ -4,12 +4,17 @@ import { RobotModel } from './RobotModel';
 
 export const HeroRobot: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const robotRef = useRef<RobotModel | null>(null);
 
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.innerWidth >= 1024;
   });
+
+  // Current active section text state
+  const [activeText, setActiveText] = useState<'hero' | 'services'>('hero');
+  const [textOpacity, setTextOpacity] = useState(1);
 
   // 1. Strictly Desktop-Only Guard
   useEffect(() => {
@@ -20,11 +25,12 @@ export const HeroRobot: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // 2. Three.js Setup & Ultra-Smooth Render Loop
+  // 2. Three.js Setup & Smooth Multi-Section Travel Render Loop
   useEffect(() => {
     if (!isDesktop) return;
     const container = containerRef.current;
-    if (!container) return;
+    const wrapper = wrapperRef.current;
+    if (!container || !wrapper) return;
 
     // Scene & Perspective Camera
     const scene = new THREE.Scene();
@@ -34,10 +40,9 @@ export const HeroRobot: React.FC = () => {
       0.1,
       50
     );
-    // Camera framing matched to reference image (front-facing, clear view of cute chibi character)
     camera.position.set(0, 0.42, 3.4);
 
-    // High-Quality WebGL Renderer (100% transparent, zero background)
+    // High-Quality WebGL Renderer (100% transparent)
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
       antialias: true,
@@ -57,17 +62,14 @@ export const HeroRobot: React.FC = () => {
     const ambientLight = new THREE.AmbientLight(0x22354c, 1.6);
     scene.add(ambientLight);
 
-    // Crisp Front Key Light (Highlights glossy white helmet & royal blue visor)
     const keyLight = new THREE.DirectionalLight(0xffffff, 3.8);
     keyLight.position.set(2.0, 3.8, 4.0);
     scene.add(keyLight);
 
-    // Soft Cyan Fill Light
     const fillLight = new THREE.DirectionalLight(0x06b6d4, 2.6);
     fillLight.position.set(-3.2, -0.5, 3.2);
     scene.add(fillLight);
 
-    // Sky Blue Rim Light (Outlines the white rounded silhouette)
     const rimLight = new THREE.DirectionalLight(0x38bdf8, 3.6);
     rimLight.position.set(0, 4.2, -3.2);
     scene.add(rimLight);
@@ -87,7 +89,7 @@ export const HeroRobot: React.FC = () => {
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      const rect = container.getBoundingClientRect();
+      const rect = wrapper.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
 
@@ -100,10 +102,16 @@ export const HeroRobot: React.FC = () => {
 
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
 
-    // Render loop
+    // Render loop & Smooth Scroll Positioning
     let animationFrameId: number;
     const clock = new THREE.Clock();
     let isVisible = true;
+
+    // Smoothed coordinates
+    let currentX = -9999;
+    let currentY = -9999;
+    let currentOpacity = 1;
+    let lastSection: 'hero' | 'services' = 'hero';
 
     const handleVisibility = () => {
       isVisible = !document.hidden;
@@ -117,6 +125,64 @@ export const HeroRobot: React.FC = () => {
 
       const delta = Math.min(clock.getDelta(), 0.1);
       const time = clock.getElapsedTime();
+
+      // 1. Calculate Target Position between Hero and Services Anchor
+      const heroTarget = document.getElementById('hero-robot-target');
+      const servicesTarget = document.getElementById('services-robot-target');
+
+      if (heroTarget && servicesTarget) {
+        const heroRect = heroTarget.getBoundingClientRect();
+        const servicesRect = servicesTarget.getBoundingClientRect();
+
+        const windowH = window.innerHeight;
+        // Start moving when services is entering the viewport
+        const startY = windowH * 0.85;
+        const endY = 160; // Settled position in Services
+        let t = (startY - servicesRect.top) / (startY - endY);
+        t = Math.max(0, Math.min(1, t));
+
+        // Smooth cubic ease
+        const smoothT = t * t * (3 - 2 * t);
+
+        // Interpolate target position
+        const targetX = heroRect.left + (servicesRect.left - heroRect.left) * smoothT;
+        const targetY = heroRect.top + (servicesRect.top - heroRect.top) * smoothT;
+
+        // Opacity: Fades out smoothly when user scrolls past Services
+        let targetOpacity = 1;
+        if (servicesRect.bottom < 320) {
+          targetOpacity = Math.max(0, Math.min(1, (servicesRect.bottom - 40) / 260));
+        }
+
+        // Initialize position on first frame without sudden jump
+        if (currentX < -5000) {
+          currentX = targetX;
+          currentY = targetY;
+          currentOpacity = targetOpacity;
+        } else {
+          // Silky smooth lerp
+          currentX += (targetX - currentX) * 0.12;
+          currentY += (targetY - currentY) * 0.12;
+          currentOpacity += (targetOpacity - currentOpacity) * 0.1;
+        }
+
+        // Apply hardware-accelerated transform
+        wrapper.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+        wrapper.style.opacity = `${currentOpacity}`;
+        wrapper.style.visibility = currentOpacity > 0.01 ? 'visible' : 'hidden';
+
+        // 2. Smooth Text Transition
+        const currentSection = smoothT > 0.5 ? 'services' : 'hero';
+        if (currentSection !== lastSection) {
+          lastSection = currentSection;
+          // Fade text out slightly, swap text, and fade in
+          setTextOpacity(0);
+          setTimeout(() => {
+            setActiveText(currentSection);
+            setTextOpacity(1);
+          }, 200);
+        }
+      }
 
       // Update robot with smooth, fluid animations
       robot.update(time, delta, cursorState);
@@ -156,29 +222,40 @@ export const HeroRobot: React.FC = () => {
   }
 
   return (
-    <div className="relative w-full max-w-[290px] lg:max-w-[320px] xl:max-w-[350px] h-[380px] xl:h-[420px] flex flex-col items-center justify-center select-none pointer-events-none box-border">
-      
-      {/* Subtle Backlight Atmospheric Glow for Depth */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] bg-gradient-to-tr from-[#0077B6]/20 via-[#18B8C4]/15 to-transparent rounded-full blur-[70px] pointer-events-none -z-10" />
+    <div
+      ref={wrapperRef}
+      className="fixed top-0 left-0 z-30 pointer-events-none will-change-transform"
+      style={{ opacity: 0 }}
+    >
+      <div className="relative w-[300px] lg:w-[330px] xl:w-[360px] h-[380px] xl:h-[420px] flex flex-col items-center justify-center select-none box-border">
+        
+        {/* Subtle Backlight Atmospheric Glow for Depth */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] bg-gradient-to-tr from-[#0077B6]/20 via-[#18B8C4]/15 to-transparent rounded-full blur-[70px] pointer-events-none -z-10" />
 
-      {/* Elegant Minimalist Welcome Pill */}
-      <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap">
-        <div className="px-3.5 py-1.5 rounded-full bg-[#0A1422]/88 backdrop-blur-md border border-white/15 shadow-[0_8px_24px_rgba(0,180,216,0.2)] flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00F0FF] opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00F0FF]" />
-          </span>
-          <span className="text-xs font-medium text-slate-100 tracking-tight">
-            Hi, welcome to PrismFlow World 👋
-          </span>
+        {/* Elegant Minimalist Welcome / Section Pill with Smooth Crossfade */}
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap transition-opacity duration-300">
+          <div
+            style={{ opacity: textOpacity }}
+            className="px-3.5 py-1.5 rounded-full bg-[#0A1422]/88 backdrop-blur-md border border-white/15 shadow-[0_8px_24px_rgba(0,180,216,0.2)] flex items-center gap-2 transition-all duration-300"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00F0FF] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00F0FF]" />
+            </span>
+            <span className="text-xs font-medium text-slate-100 tracking-tight">
+              {activeText === 'hero'
+                ? 'Hi, welcome to PrismFlow World 👋'
+                : "Here's what we build for you ✨"}
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* 3D WebGL Canvas Viewport */}
-      <div
-        ref={containerRef}
-        className="w-full h-full pointer-events-auto cursor-default flex items-center justify-center"
-      />
+        {/* 3D WebGL Canvas Viewport */}
+        <div
+          ref={containerRef}
+          className="w-full h-full pointer-events-auto cursor-default flex items-center justify-center"
+        />
+      </div>
     </div>
   );
 };

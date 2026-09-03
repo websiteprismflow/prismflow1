@@ -1,6 +1,5 @@
 import React from 'react';
 import { ArrowRight, Compass, Sparkles, Cpu, Layers } from 'lucide-react';
-import { HeroRobot } from './robot';
 
 interface HeroProps {
   onExploreWork: () => void;
@@ -88,10 +87,11 @@ export const Hero: React.FC<HeroProps> = ({ onExploreWork, onContactClick }) => 
 
           </div>
 
-          {/* Cute, Compact 3D AI Robot Companion (Desktop Only, Contained in Hero) */}
-          <div className="hidden lg:flex items-center justify-center shrink-0 lg:w-[320px] xl:w-[380px] 2xl:w-[420px] z-10">
-            <HeroRobot />
-          </div>
+          {/* Target Anchor for 3D AI Robot Companion on Desktop */}
+          <div
+            id="hero-robot-target"
+            className="hidden lg:flex items-center justify-center shrink-0 lg:w-[320px] xl:w-[380px] 2xl:w-[420px] h-[380px] xl:h-[420px] z-10 pointer-events-none"
+          />
 
         </div>
       </div>

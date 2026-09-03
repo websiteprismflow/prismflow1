@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Navbar } from '../components/Navbar';
 import { Hero } from '../components/Hero';
+import { HeroRobot } from '../components/robot';
 import { TechStrip } from '../components/TechStrip';
 import { Services } from '../components/Services';
 import { Portfolio } from '../components/Portfolio';
@@ -30,9 +31,12 @@ export const HomePage: React.FC = () => {
       {/* Navigation */}
       <Navbar onNavigateToSection={scrollToSection} />
 
+      {/* Persistent Smooth Traveling 3D AI Robot Companion (Desktop Only) */}
+      <HeroRobot />
+
       {/* Main Content */}
       <main className="flex-1">
-        {/* 1. Hero with interactive AI Robot Centerpiece */}
+        {/* 1. Hero */}
         <Hero 
           onExploreWork={() => scrollToSection('work')}
           onContactClick={() => scrollToSection('contact')}
