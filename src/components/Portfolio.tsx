@@ -45,7 +45,7 @@ export const Portfolio: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 gap-6">
+        <div className="mb-12 sm:mb-16">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/10 mb-4">
               <span className="w-1.5 h-1.5 rounded-full bg-mint-primary" />
@@ -54,14 +54,14 @@ export const Portfolio: React.FC = () => {
               </span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-text-primary leading-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-text-primary leading-tight mb-4">
               Things We’ve Brought to Life.
             </h2>
-          </div>
 
-          <p className="text-sm sm:text-base text-text-secondary max-w-md">
-            Take a look at our real projects, working demos, and digital experiences.
-          </p>
+            <p className="text-sm sm:text-base text-text-secondary max-w-xl leading-relaxed">
+              Take a look at our real projects, working demos, and digital experiences.
+            </p>
+          </div>
         </div>
 
         {/* Category Filter Tabs */}
