@@ -1,2 +1,2 @@
-export { RobotCompanion } from './RobotCompanion';
-export * from './types';
+export { HeroRobot } from './HeroRobot';
+export * from './RobotModel';

@@ -1,12 +1,13 @@
 import * as THREE from 'three';
-import { RobotMood } from './types';
+
+export type RobotExpression = 'idle' | 'greet' | 'smile' | 'curious';
 
 export class RobotModel {
   public root: THREE.Group;
   public headGroup: THREE.Group;
   public torsoGroup: THREE.Group;
-  public leftHand: THREE.Group;
-  public rightHand: THREE.Group;
+  public leftArm: THREE.Group;
+  public rightArm: THREE.Group;
   public chestCore: THREE.Mesh;
   public antennaTip: THREE.Mesh;
 
@@ -15,10 +16,10 @@ export class RobotModel {
   private visorTexture: THREE.CanvasTexture;
   private visorMaterial: THREE.MeshStandardMaterial;
 
-  private currentMood: RobotMood = 'idle';
+  private currentExpression: RobotExpression = 'idle';
   private blinkProgress: number = 0;
   private isBlinking: boolean = false;
-  private nextBlinkTime: number = 2.5;
+  private nextBlinkTime: number = 2.0;
 
   private targetHeadRotY: number = 0;
   private targetHeadRotX: number = 0;
@@ -26,7 +27,7 @@ export class RobotModel {
   constructor() {
     this.root = new THREE.Group();
 
-    // 1. Create Dynamic Digital Visor Texture
+    // 1. Dynamic High-Contrast Digital Visor Canvas (512x256)
     this.visorCanvas = document.createElement('canvas');
     this.visorCanvas.width = 512;
     this.visorCanvas.height = 256;
@@ -37,226 +38,259 @@ export class RobotModel {
     this.visorTexture = new THREE.CanvasTexture(this.visorCanvas);
     this.visorTexture.colorSpace = THREE.SRGBColorSpace;
 
-    // 2. High-end PBR Materials
-    const obsidianShellMat = new THREE.MeshPhysicalMaterial({
-      color: 0x0B1116,
-      metalness: 0.35,
-      roughness: 0.18,
-      clearcoat: 0.9,
-      clearcoatRoughness: 0.12,
+    // 2. High-Contrast Premium Color Palette (Silver/Light Gray + Deep Navy)
+    // Silver / Light Metallic Gray Armor Plates
+    const silverArmorMat = new THREE.MeshStandardMaterial({
+      color: 0xDAE3ED, // Bright premium silver / light gray
+      metalness: 0.65,
+      roughness: 0.2,
     });
 
-    const darkTitaniumMat = new THREE.MeshStandardMaterial({
-      color: 0x16202A,
-      metalness: 0.8,
+    // Deep Navy / Dark Blue Accent Panels
+    const deepNavyMat = new THREE.MeshStandardMaterial({
+      color: 0x0A223E, // Deep rich navy blue
+      metalness: 0.45,
       roughness: 0.3,
     });
 
-    const neonCyanMat = new THREE.MeshBasicMaterial({
-      color: 0x3DD6DE,
+    // Medium Technical Slate Gray for Joints & Trim
+    const slateTrimMat = new THREE.MeshStandardMaterial({
+      color: 0x73879C,
+      metalness: 0.55,
+      roughness: 0.35,
     });
 
-    const glowMintMat = new THREE.MeshBasicMaterial({
-      color: 0x18B8C4,
+    // Vivid Glowing Cyan / Blue Accents
+    const brightCyanGlowMat = new THREE.MeshBasicMaterial({
+      color: 0x00E5FF,
     });
 
+    const softBlueGlowMat = new THREE.MeshBasicMaterial({
+      color: 0x38BDF8,
+    });
+
+    // Glass Visor with High-Contrast Emissive Display
     this.visorMaterial = new THREE.MeshStandardMaterial({
-      color: 0x050505,
-      roughness: 0.1,
-      metalness: 0.1,
+      color: 0x030810,
+      roughness: 0.08,
+      metalness: 0.2,
       emissive: 0xffffff,
       emissiveMap: this.visorTexture,
-      emissiveIntensity: 2.2,
+      emissiveIntensity: 2.5,
     });
 
     // 3. Head Assembly
     this.headGroup = new THREE.Group();
-    this.headGroup.position.set(0, 0.95, 0);
+    this.headGroup.position.set(0, 0.96, 0);
 
-    // Main Helmet Shell (Curved aerodynamic sphere)
-    const helmetGeo = new THREE.SphereGeometry(0.55, 32, 32);
-    helmetGeo.scale(1.0, 0.95, 1.05);
-    const helmetMesh = new THREE.Mesh(helmetGeo, obsidianShellMat);
+    // Main Helmet Dome (Bright Silver Armor)
+    const helmetGeo = new THREE.SphereGeometry(0.56, 32, 32);
+    helmetGeo.scale(1.0, 0.94, 1.05);
+    const helmetMesh = new THREE.Mesh(helmetGeo, silverArmorMat);
     this.headGroup.add(helmetMesh);
 
-    // Front Visor Screen (Embedded convex curved glass)
-    const visorGeo = new THREE.SphereGeometry(0.48, 32, 16, Math.PI * 0.15, Math.PI * 0.7, Math.PI * 0.25, Math.PI * 0.5);
+    // Deep Navy Rear Cowl / Trim
+    const rearCowlGeo = new THREE.SphereGeometry(0.57, 32, 16, Math.PI * 0.7, Math.PI * 0.6, 0, Math.PI * 0.8);
+    const rearCowlMesh = new THREE.Mesh(rearCowlGeo, deepNavyMat);
+    rearCowlMesh.position.set(0, 0.02, -0.05);
+    this.headGroup.add(rearCowlMesh);
+
+    // Front Visor Screen
+    const visorGeo = new THREE.SphereGeometry(0.49, 32, 16, Math.PI * 0.15, Math.PI * 0.7, Math.PI * 0.25, Math.PI * 0.5);
     visorGeo.scale(1.02, 0.92, 1.08);
     const visorMesh = new THREE.Mesh(visorGeo, this.visorMaterial);
     visorMesh.position.set(0, 0.02, 0.04);
     this.headGroup.add(visorMesh);
 
-    // Visor Outer Metallic Bezel Ring
-    const bezelGeo = new THREE.TorusGeometry(0.45, 0.025, 16, 48, Math.PI * 0.8);
-    const bezelMesh = new THREE.Mesh(bezelGeo, darkTitaniumMat);
+    // Visor Outer Metallic Bezel Ring (Deep Navy + Silver Trim)
+    const bezelGeo = new THREE.TorusGeometry(0.46, 0.028, 16, 48, Math.PI * 0.8);
+    const bezelMesh = new THREE.Mesh(bezelGeo, deepNavyMat);
     bezelMesh.position.set(0, 0.02, 0.38);
     bezelMesh.rotation.x = Math.PI * 0.05;
     this.headGroup.add(bezelMesh);
 
-    // Crown Antenna Fin
-    const antennaBaseGeo = new THREE.BoxGeometry(0.04, 0.18, 0.28);
-    const antennaBaseMesh = new THREE.Mesh(antennaBaseGeo, darkTitaniumMat);
+    // Crown Antenna Fin (Silver Base + Navy Trim)
+    const antennaBaseGeo = new THREE.BoxGeometry(0.05, 0.2, 0.3);
+    const antennaBaseMesh = new THREE.Mesh(antennaBaseGeo, silverArmorMat);
     antennaBaseMesh.position.set(0, 0.56, -0.05);
     antennaBaseMesh.rotation.x = -Math.PI * 0.1;
     this.headGroup.add(antennaBaseMesh);
 
     // Glowing Antenna Crystal Tip
-    const crystalGeo = new THREE.OctahedronGeometry(0.06, 0);
-    this.antennaTip = new THREE.Mesh(crystalGeo, neonCyanMat);
-    this.antennaTip.position.set(0, 0.7, -0.1);
+    const crystalGeo = new THREE.OctahedronGeometry(0.065, 0);
+    this.antennaTip = new THREE.Mesh(crystalGeo, brightCyanGlowMat);
+    this.antennaTip.position.set(0, 0.72, -0.11);
     this.headGroup.add(this.antennaTip);
 
-    // Side Ear Audio-Sensory Pods (Left & Right)
-    const earGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.1, 24);
+    // Side Ear Audio-Sensory Pods (Silver Outer + Navy Core)
+    const earGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.12, 24);
     earGeo.rotateZ(Math.PI / 2);
 
-    const leftEar = new THREE.Mesh(earGeo, darkTitaniumMat);
+    const leftEar = new THREE.Mesh(earGeo, silverArmorMat);
     leftEar.position.set(-0.55, 0, 0);
     this.headGroup.add(leftEar);
 
-    const rightEar = new THREE.Mesh(earGeo, darkTitaniumMat);
+    const rightEar = new THREE.Mesh(earGeo, silverArmorMat);
     rightEar.position.set(0.55, 0, 0);
     this.headGroup.add(rightEar);
 
-    // Ear Glowing Rings
-    const earRingGeo = new THREE.TorusGeometry(0.09, 0.015, 12, 24);
+    // Ear Blue Glow Rings
+    const earRingGeo = new THREE.TorusGeometry(0.095, 0.018, 12, 24);
     earRingGeo.rotateY(Math.PI / 2);
 
-    const leftRing = new THREE.Mesh(earRingGeo, glowMintMat);
-    leftRing.position.set(-0.61, 0, 0);
+    const leftRing = new THREE.Mesh(earRingGeo, softBlueGlowMat);
+    leftRing.position.set(-0.62, 0, 0);
     this.headGroup.add(leftRing);
 
-    const rightRing = new THREE.Mesh(earRingGeo, glowMintMat);
-    rightRing.position.set(0.61, 0, 0);
+    const rightRing = new THREE.Mesh(earRingGeo, softBlueGlowMat);
+    rightRing.position.set(0.62, 0, 0);
     this.headGroup.add(rightRing);
 
     this.root.add(this.headGroup);
 
-    // 4. Floating Torso Assembly
+    // 4. Floating Torso Assembly (Silver Armor Chest + Deep Navy Core)
     this.torsoGroup = new THREE.Group();
     this.torsoGroup.position.set(0, 0.15, 0);
 
-    // Segmented Neck Collar
-    const collarGeo = new THREE.CylinderGeometry(0.24, 0.28, 0.14, 24);
-    const collarMesh = new THREE.Mesh(collarGeo, darkTitaniumMat);
+    // Segmented Neck Collar (Deep Navy)
+    const collarGeo = new THREE.CylinderGeometry(0.25, 0.3, 0.15, 24);
+    const collarMesh = new THREE.Mesh(collarGeo, deepNavyMat);
     collarMesh.position.set(0, 0.65, 0);
     this.torsoGroup.add(collarMesh);
 
-    // Chest Chassis
-    const chestGeo = new THREE.CylinderGeometry(0.42, 0.28, 0.65, 24);
-    chestGeo.scale(1.0, 1.0, 0.75);
-    const chestMesh = new THREE.Mesh(chestGeo, obsidianShellMat);
+    // Main Chest Armor Plate (Bright Silver)
+    const chestGeo = new THREE.CylinderGeometry(0.44, 0.3, 0.68, 24);
+    chestGeo.scale(1.0, 1.0, 0.76);
+    const chestMesh = new THREE.Mesh(chestGeo, silverArmorMat);
     chestMesh.position.set(0, 0.3, 0);
     this.torsoGroup.add(chestMesh);
 
-    // Chest Glowing Arc Reactor Core (PrismFlow Logo Symbolism)
-    const coreOuterGeo = new THREE.TorusGeometry(0.12, 0.02, 16, 32);
-    const coreOuterMesh = new THREE.Mesh(coreOuterGeo, darkTitaniumMat);
-    coreOuterMesh.position.set(0, 0.35, 0.28);
+    // Deep Navy Inset Breastplate Panel
+    const chestPlateGeo = new THREE.BoxGeometry(0.4, 0.36, 0.12);
+    const chestPlateMesh = new THREE.Mesh(chestPlateGeo, deepNavyMat);
+    chestPlateMesh.position.set(0, 0.35, 0.24);
+    this.torsoGroup.add(chestPlateMesh);
+
+    // Chest Glowing Arc Core (Cyan/Blue Reactor)
+    const coreOuterGeo = new THREE.TorusGeometry(0.12, 0.022, 16, 32);
+    const coreOuterMesh = new THREE.Mesh(coreOuterGeo, silverArmorMat);
+    coreOuterMesh.position.set(0, 0.35, 0.31);
     this.torsoGroup.add(coreOuterMesh);
 
     const coreInnerGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.02, 24);
     coreInnerGeo.rotateX(Math.PI / 2);
-    this.chestCore = new THREE.Mesh(coreInnerGeo, neonCyanMat);
-    this.chestCore.position.set(0, 0.35, 0.28);
+    this.chestCore = new THREE.Mesh(coreInnerGeo, brightCyanGlowMat);
+    this.chestCore.position.set(0, 0.35, 0.31);
     this.torsoGroup.add(this.chestCore);
 
-    // Lower Levitator Ring
-    const levitatorGeo = new THREE.TorusGeometry(0.22, 0.025, 16, 32);
+    // Lower Levitator Thruster Ring (Silver + Blue Glow)
+    const levitatorGeo = new THREE.TorusGeometry(0.24, 0.03, 16, 32);
     levitatorGeo.rotateX(Math.PI / 2);
-    const levitatorMesh = new THREE.Mesh(levitatorGeo, glowMintMat);
-    levitatorMesh.position.set(0, -0.05, 0);
+    const levitatorMesh = new THREE.Mesh(levitatorGeo, slateTrimMat);
+    levitatorMesh.position.set(0, -0.06, 0);
     this.torsoGroup.add(levitatorMesh);
+
+    const levitatorGlowGeo = new THREE.RingGeometry(0.14, 0.24, 24);
+    levitatorGlowGeo.rotateX(Math.PI / 2);
+    const levitatorGlowMesh = new THREE.Mesh(levitatorGlowGeo, softBlueGlowMat);
+    levitatorGlowMesh.position.set(0, -0.07, 0);
+    this.torsoGroup.add(levitatorGlowMesh);
 
     this.root.add(this.torsoGroup);
 
-    // 5. Floating Magnetic Hands (Left & Right)
-    this.leftHand = this.createFloatingHand(true, obsidianShellMat, darkTitaniumMat, glowMintMat);
-    this.leftHand.position.set(-0.68, 0.3, 0.1);
-    this.root.add(this.leftHand);
+    // 5. Floating Arms / Hands (Left & Right)
+    this.leftArm = this.createArm(true, silverArmorMat, deepNavyMat, brightCyanGlowMat);
+    this.leftArm.position.set(-0.72, 0.32, 0.08);
+    this.root.add(this.leftArm);
 
-    this.rightHand = this.createFloatingHand(false, obsidianShellMat, darkTitaniumMat, glowMintMat);
-    this.rightHand.position.set(0.68, 0.3, 0.1);
-    this.root.add(this.rightHand);
+    this.rightArm = this.createArm(false, silverArmorMat, deepNavyMat, brightCyanGlowMat);
+    this.rightArm.position.set(0.72, 0.32, 0.08);
+    this.root.add(this.rightArm);
 
-    // Initial face render
-    this.drawVisorFace(this.currentMood, 0, 0);
+    // Initial Face Render
+    this.drawVisorFace('idle', 0, 0);
   }
 
-  private createFloatingHand(
+  private createArm(
     isLeft: boolean,
-    shellMat: THREE.Material,
-    accentMat: THREE.Material,
+    silverMat: THREE.Material,
+    navyMat: THREE.Material,
     glowMat: THREE.Material
   ): THREE.Group {
-    const hand = new THREE.Group();
+    const armGroup = new THREE.Group();
 
-    // Palm / Floating Pod
-    const palmGeo = new THREE.CapsuleGeometry(0.07, 0.12, 8, 16);
-    palmGeo.rotateZ(isLeft ? Math.PI * 0.1 : -Math.PI * 0.1);
-    const palmMesh = new THREE.Mesh(palmGeo, shellMat);
-    hand.add(palmMesh);
+    // Floating Shoulder Pauldron (Bright Silver Armor)
+    const pauldronGeo = new THREE.SphereGeometry(0.16, 16, 16);
+    pauldronGeo.scale(1.1, 0.8, 1.0);
+    const pauldronMesh = new THREE.Mesh(pauldronGeo, silverMat);
+    pauldronMesh.position.set(isLeft ? 0.04 : -0.04, 0.12, 0);
+    armGroup.add(pauldronMesh);
 
-    // Magnetic Emitter Core
-    const palmRingGeo = new THREE.RingGeometry(0.02, 0.05, 16);
-    palmRingGeo.rotateY(isLeft ? -Math.PI * 0.4 : Math.PI * 0.4);
-    const palmGlow = new THREE.Mesh(palmRingGeo, glowMat);
-    palmGlow.position.set(isLeft ? 0.04 : -0.04, 0, 0.05);
-    hand.add(palmGlow);
+    // Forearm Shell (Deep Navy with Silver Cap)
+    const forearmGeo = new THREE.CapsuleGeometry(0.08, 0.18, 8, 16);
+    forearmGeo.rotateZ(isLeft ? Math.PI * 0.1 : -Math.PI * 0.1);
+    const forearmMesh = new THREE.Mesh(forearmGeo, navyMat);
+    armGroup.add(forearmMesh);
 
-    // Stylized floating index & thumb segments
-    const fingerGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.08, 12);
-    fingerGeo.rotateZ(isLeft ? Math.PI * 0.15 : -Math.PI * 0.15);
-    const fingerMesh = new THREE.Mesh(fingerGeo, accentMat);
-    fingerMesh.position.set(isLeft ? 0.05 : -0.05, -0.08, 0.02);
-    hand.add(fingerMesh);
+    // Forearm Silver Stripe
+    const bandGeo = new THREE.TorusGeometry(0.085, 0.015, 12, 24);
+    bandGeo.rotateX(Math.PI / 2);
+    const bandMesh = new THREE.Mesh(bandGeo, silverMat);
+    bandMesh.position.set(0, 0.02, 0);
+    armGroup.add(bandMesh);
 
-    return hand;
+    // Hand Emitter Core (Glowing Cyan)
+    const palmGeo = new THREE.RingGeometry(0.025, 0.055, 16);
+    palmGeo.rotateY(isLeft ? -Math.PI * 0.4 : Math.PI * 0.4);
+    const palmGlow = new THREE.Mesh(palmGeo, glowMat);
+    palmGlow.position.set(isLeft ? 0.05 : -0.05, -0.1, 0.05);
+    armGroup.add(palmGlow);
+
+    return armGroup;
   }
 
   // Draw 2D Digital Visor Expressions
-  private drawVisorFace(mood: RobotMood, pupilX: number, pupilY: number) {
+  private drawVisorFace(expression: RobotExpression, pupilX: number, pupilY: number) {
     const ctx = this.visorCtx;
     const w = this.visorCanvas.width;
     const h = this.visorCanvas.height;
 
     ctx.clearRect(0, 0, w, h);
 
-    // Background is transparent/deep dark
-    ctx.fillStyle = '#020406';
+    // Deep dark background for rich contrast
+    ctx.fillStyle = '#040810';
     ctx.fillRect(0, 0, w, h);
 
-    // Cyan Neon glow parameters
-    const eyeCyan = '#3DD6DE';
-    const mintGlow = '#18B8C4';
+    // Bright cyan glow
+    const cyanLight = '#00E5FF';
+    const blueGlow = '#38BDF8';
 
-    ctx.shadowColor = mintGlow;
-    ctx.shadowBlur = 18;
-    ctx.fillStyle = eyeCyan;
-    ctx.strokeStyle = eyeCyan;
-    ctx.lineWidth = 10;
+    ctx.shadowColor = blueGlow;
+    ctx.shadowBlur = 24;
+    ctx.fillStyle = cyanLight;
+    ctx.strokeStyle = cyanLight;
+    ctx.lineWidth = 11;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
     const eyeCenterY = h * 0.48;
     const leftEyeX = w * 0.34;
     const rightEyeX = w * 0.66;
-
     const blinkScale = 1 - this.blinkProgress;
 
     ctx.save();
     ctx.translate(0, (1 - blinkScale) * eyeCenterY * 0.3);
 
-    switch (mood) {
-      case 'happy':
-        // Happy upward curved eyes ^ ^ and subtle warm smile
-        this.drawHappyEye(ctx, leftEyeX, eyeCenterY, blinkScale);
-        this.drawHappyEye(ctx, rightEyeX, eyeCenterY, blinkScale);
+    switch (expression) {
+      case 'smile':
+      case 'greet':
+        // Warm smiling eyes ^ ^ and cheerful mouth
+        this.drawSmilingEye(ctx, leftEyeX, eyeCenterY, blinkScale);
+        this.drawSmilingEye(ctx, rightEyeX, eyeCenterY, blinkScale);
 
-        // Smile curve
-        if (blinkScale > 0.4) {
+        if (blinkScale > 0.3) {
           ctx.beginPath();
-          ctx.arc(w * 0.5, eyeCenterY + 42, 28, Math.PI * 0.15, Math.PI * 0.85, false);
+          ctx.arc(w * 0.5, eyeCenterY + 40, 30, Math.PI * 0.15, Math.PI * 0.85, false);
           ctx.stroke();
         }
         break;
@@ -269,70 +303,30 @@ export class RobotModel {
         this.drawCuriousEye(ctx, leftEyeX, eyeCenterY, pOffsetX, pOffsetY, blinkScale);
         this.drawCuriousEye(ctx, rightEyeX, eyeCenterY, pOffsetX, pOffsetY, blinkScale);
 
-        // Small curious mouth dot
-        if (blinkScale > 0.5) {
+        if (blinkScale > 0.4) {
           ctx.beginPath();
-          ctx.arc(w * 0.5 + pOffsetX * 0.4, eyeCenterY + 45, 6, 0, Math.PI * 2);
+          ctx.arc(w * 0.5 + pOffsetX * 0.4, eyeCenterY + 44, 6, 0, Math.PI * 2);
           ctx.fill();
         }
         break;
       }
-
-      case 'excited':
-        // Energetic glowing eyes with upward angle
-        this.drawExcitedEye(ctx, leftEyeX, eyeCenterY, true, blinkScale);
-        this.drawExcitedEye(ctx, rightEyeX, eyeCenterY, false, blinkScale);
-
-        // Vibrant smile
-        ctx.beginPath();
-        ctx.arc(w * 0.5, eyeCenterY + 38, 34, Math.PI * 0.1, Math.PI * 0.9, false);
-        ctx.stroke();
-        break;
-
-      case 'thinking': {
-        // Asymmetric thoughtful eyes (one raised, one concentrated)
-        this.drawPillEye(ctx, leftEyeX, eyeCenterY - 10, 48, 22 * blinkScale);
-        this.drawPillEye(ctx, rightEyeX, eyeCenterY + 5, 42, 14 * blinkScale);
-
-        // Soft processing wave dots
-        ctx.fillStyle = mintGlow;
-        for (let i = -1; i <= 1; i++) {
-          ctx.beginPath();
-          ctx.arc(w * 0.5 + i * 16, eyeCenterY + 45, 4, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        break;
-      }
-
-      case 'confident':
-        // Sleek angled high-tech visor slits
-        this.drawConfidentEye(ctx, leftEyeX, eyeCenterY, true, blinkScale);
-        this.drawConfidentEye(ctx, rightEyeX, eyeCenterY, false, blinkScale);
-
-        // Confident horizontal subtle smile
-        ctx.beginPath();
-        ctx.moveTo(w * 0.44, eyeCenterY + 44);
-        ctx.lineTo(w * 0.56, eyeCenterY + 44);
-        ctx.stroke();
-        break;
 
       case 'idle':
       default:
-        // Calm horizontal rounded visor pill eyes
-        this.drawPillEye(ctx, leftEyeX + pupilX * 10, eyeCenterY + pupilY * 8, 48, 20 * blinkScale);
-        this.drawPillEye(ctx, rightEyeX + pupilX * 10, eyeCenterY + pupilY * 8, 48, 20 * blinkScale);
+        // Calm horizontal rounded visor eyes
+        this.drawPillEye(ctx, leftEyeX + pupilX * 8, eyeCenterY + pupilY * 6, 50, 20 * blinkScale);
+        this.drawPillEye(ctx, rightEyeX + pupilX * 8, eyeCenterY + pupilY * 6, 50, 20 * blinkScale);
         break;
     }
 
     ctx.restore();
-
     this.visorTexture.needsUpdate = true;
   }
 
-  private drawHappyEye(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  private drawSmilingEye(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
     if (scale <= 0.1) return;
     ctx.beginPath();
-    ctx.arc(x, y + 10, 24, Math.PI * 1.15, Math.PI * 1.85, false);
+    ctx.arc(x, y + 10, 26, Math.PI * 1.15, Math.PI * 1.85, false);
     ctx.stroke();
   }
 
@@ -345,52 +339,13 @@ export class RobotModel {
     scale: number
   ) {
     if (scale <= 0.1) return;
-    // Outer optical ring
     ctx.beginPath();
     ctx.ellipse(x, y, 26, 26 * scale, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Inner pupil
     ctx.beginPath();
     ctx.arc(x + pX, y + pY * scale, 10 * scale, 0, Math.PI * 2);
     ctx.fill();
-  }
-
-  private drawExcitedEye(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    isLeft: boolean,
-    scale: number
-  ) {
-    if (scale <= 0.1) return;
-    ctx.beginPath();
-    ctx.ellipse(x, y, 28, 28 * scale, isLeft ? -0.1 : 0.1, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Inner highlight sparkle
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath();
-    ctx.arc(x + (isLeft ? -6 : 6), y - 6 * scale, 4 * scale, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#3DD6DE';
-  }
-
-  private drawConfidentEye(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    isLeft: boolean,
-    scale: number
-  ) {
-    if (scale <= 0.1) return;
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(isLeft ? 0.15 : -0.15);
-    ctx.beginPath();
-    ctx.roundRect(-24, -9 * scale, 48, 18 * scale, 8);
-    ctx.fill();
-    ctx.restore();
   }
 
   private drawPillEye(
@@ -401,7 +356,6 @@ export class RobotModel {
     height: number
   ) {
     if (height <= 2) {
-      // Flat closed blink slit
       ctx.beginPath();
       ctx.moveTo(x - width / 2, y);
       ctx.lineTo(x + width / 2, y);
@@ -413,81 +367,74 @@ export class RobotModel {
     ctx.fill();
   }
 
-  // Master Frame Update Loop
+  // Update Animation Loop
   public update(
     time: number,
     delta: number,
-    activeMood: RobotMood,
-    cursor: { normX: number; normY: number; isNear: boolean; distance: number }
+    activeExpression: RobotExpression,
+    cursor: { normX: number; normY: number; isNear: boolean }
   ) {
-    // If user cursor is close (< 280px), automatically trigger 'happy' smile reaction!
-    const effectiveMood: RobotMood = cursor.isNear ? 'happy' : activeMood;
+    const effectiveExpression: RobotExpression = cursor.isNear ? 'smile' : activeExpression;
 
-    // Periodic natural blinking
+    // Natural periodic blinking
     if (!this.isBlinking && time > this.nextBlinkTime) {
       this.isBlinking = true;
       this.blinkProgress = 0;
     }
 
     if (this.isBlinking) {
-      this.blinkProgress += delta * 7.5; // Quick natural blink (~130ms)
+      this.blinkProgress += delta * 7.5;
       if (this.blinkProgress >= 1) {
         this.blinkProgress = 0;
         this.isBlinking = false;
-        this.nextBlinkTime = time + 3.0 + Math.random() * 4.0;
+        this.nextBlinkTime = time + 3.0 + Math.random() * 3.5;
       }
     }
 
-    // Smooth head tracking toward cursor
+    // Head tracking toward cursor
     if (cursor.isNear) {
-      this.targetHeadRotY = cursor.normX * 0.65;
-      this.targetHeadRotX = -cursor.normY * 0.45;
+      this.targetHeadRotY = cursor.normX * 0.6;
+      this.targetHeadRotX = -cursor.normY * 0.4;
     } else {
-      // Subtle ambient gaze
-      this.targetHeadRotY = cursor.normX * 0.35 + Math.sin(time * 0.8) * 0.08;
-      this.targetHeadRotX = -cursor.normY * 0.25 + Math.cos(time * 0.6) * 0.05;
+      this.targetHeadRotY = cursor.normX * 0.3 + Math.sin(time * 0.7) * 0.08;
+      this.targetHeadRotX = -cursor.normY * 0.2 + Math.cos(time * 0.6) * 0.05;
     }
 
-    // Damped lerp for silky smooth rotation
     const lerpFactor = 0.08;
     this.headGroup.rotation.y += (this.targetHeadRotY - this.headGroup.rotation.y) * lerpFactor;
     this.headGroup.rotation.x += (this.targetHeadRotX - this.headGroup.rotation.x) * lerpFactor;
 
-    // Subtle gentle head tilt depending on mood
-    const targetTiltZ = effectiveMood === 'curious' ? 0.12 : 0;
-    this.headGroup.rotation.z += (targetTiltZ - this.headGroup.rotation.z) * lerpFactor;
+    // Draw face
+    this.currentExpression = effectiveExpression;
+    this.drawVisorFace(this.currentExpression, cursor.normX, cursor.normY);
 
-    // Redraw face if mood changed or during blink / pupil tracking
-    this.currentMood = effectiveMood;
-    this.drawVisorFace(this.currentMood, cursor.normX, cursor.normY);
-
-    // Floating idle bobbing & breathing
+    // Floating idle physics
     const floatY = Math.sin(time * 1.8) * 0.06;
-    const breatheY = Math.cos(time * 1.4) * 0.015;
+    const breatheY = Math.cos(time * 1.4) * 0.018;
 
-    this.headGroup.position.y = 0.95 + floatY * 0.8;
-    this.torsoGroup.position.y = 0.15 + floatY * 0.4 + breatheY;
+    this.headGroup.position.y = 0.96 + floatY * 0.75;
+    this.torsoGroup.position.y = 0.15 + floatY * 0.35 + breatheY;
 
-    // Floating hands counter-movement & subtle gestures
-    const handWave = Math.sin(time * 2.2) * 0.04;
-    this.leftHand.position.y = 0.3 + floatY * 0.5 - handWave;
-    this.rightHand.position.y = 0.3 + floatY * 0.5 + handWave;
+    // Floating arms physics
+    const armWave = Math.sin(time * 2.2) * 0.04;
+    this.leftArm.position.y = 0.32 + floatY * 0.4 - armWave;
+    this.rightArm.position.y = 0.32 + floatY * 0.4 + armWave;
 
-    if (effectiveMood === 'happy' || effectiveMood === 'excited') {
-      // Cheerful subtle hand lift
-      this.rightHand.position.y += 0.08;
-      this.rightHand.rotation.z = -0.2 + Math.sin(time * 4.0) * 0.05;
+    if (effectiveExpression === 'smile' || effectiveExpression === 'greet') {
+      // Cheerful subtle greeting hand posture
+      this.rightArm.position.y += 0.08;
+      this.rightArm.rotation.z = -0.22 + Math.sin(time * 3.5) * 0.04;
     } else {
-      this.rightHand.rotation.z = -0.05;
+      this.rightArm.rotation.z = -0.06;
     }
 
-    // Antenna & Chest Core Pulsing Light
-    const pulse = 1.6 + Math.sin(time * 3.5) * 0.5;
+    // Emissive Pulsing Core
+    const pulse = 1.8 + Math.sin(time * 3.2) * 0.4;
     this.visorMaterial.emissiveIntensity = pulse;
     (this.chestCore.material as THREE.MeshBasicMaterial).color.setRGB(
-      0.06 * pulse,
-      0.65 * pulse,
-      0.75 * pulse
+      0.0,
+      0.7 * pulse,
+      0.9 * pulse
     );
   }
 
