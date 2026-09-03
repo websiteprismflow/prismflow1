@@ -27,7 +27,7 @@ export class RobotModel {
   constructor() {
     this.root = new THREE.Group();
 
-    // 1. Dynamic High-Contrast Digital Visor Canvas (512x256)
+    // 1. Dynamic Digital Visor Canvas (512x256)
     this.visorCanvas = document.createElement('canvas');
     this.visorCanvas.width = 512;
     this.visorCanvas.height = 256;
@@ -38,173 +38,173 @@ export class RobotModel {
     this.visorTexture = new THREE.CanvasTexture(this.visorCanvas);
     this.visorTexture.colorSpace = THREE.SRGBColorSpace;
 
-    // 2. High-Contrast Premium Color Palette (Silver/Light Gray + Deep Navy)
-    // Silver / Light Metallic Gray Armor Plates
+    // 2. High-Visibility PBR Materials (Low metalness = High Diffuse Luma on Black Backgrounds)
+    // Primary Body: Bright Luminous Silver / Crisp Light Gray (0xEBF2FA)
     const silverArmorMat = new THREE.MeshStandardMaterial({
-      color: 0xDAE3ED, // Bright premium silver / light gray
-      metalness: 0.65,
-      roughness: 0.2,
+      color: 0xEEF4FA, // Bright luminous silver
+      metalness: 0.12, // Low metalness ensures it catches light rather than reflecting black!
+      roughness: 0.22,
     });
 
-    // Deep Navy / Dark Blue Accent Panels
+    // Secondary Accent: Deep Rich Navy Blue (0x123154)
     const deepNavyMat = new THREE.MeshStandardMaterial({
-      color: 0x0A223E, // Deep rich navy blue
-      metalness: 0.45,
-      roughness: 0.3,
+      color: 0x133458, // Deep navy blue with clean diffuse tone
+      metalness: 0.15,
+      roughness: 0.32,
     });
 
-    // Medium Technical Slate Gray for Joints & Trim
+    // Technical Trim: Brushed Steel / Slate Gray (0x96A9BD)
     const slateTrimMat = new THREE.MeshStandardMaterial({
-      color: 0x73879C,
-      metalness: 0.55,
-      roughness: 0.35,
+      color: 0x94A7BA,
+      metalness: 0.25,
+      roughness: 0.28,
     });
 
-    // Vivid Glowing Cyan / Blue Accents
+    // Emissive Cyan & Sky Blue Neon Accents
     const brightCyanGlowMat = new THREE.MeshBasicMaterial({
-      color: 0x00E5FF,
+      color: 0x00F0FF,
     });
 
     const softBlueGlowMat = new THREE.MeshBasicMaterial({
       color: 0x38BDF8,
     });
 
-    // Glass Visor with High-Contrast Emissive Display
+    // Visor Face Screen (High Contrast Glass with Vivid Emissive Display)
     this.visorMaterial = new THREE.MeshStandardMaterial({
-      color: 0x030810,
-      roughness: 0.08,
-      metalness: 0.2,
+      color: 0x060E1A,
+      roughness: 0.1,
+      metalness: 0.1,
       emissive: 0xffffff,
       emissiveMap: this.visorTexture,
-      emissiveIntensity: 2.5,
+      emissiveIntensity: 3.2,
     });
 
     // 3. Head Assembly
     this.headGroup = new THREE.Group();
-    this.headGroup.position.set(0, 0.96, 0);
+    this.headGroup.position.set(0, 0.98, 0);
 
-    // Main Helmet Dome (Bright Silver Armor)
-    const helmetGeo = new THREE.SphereGeometry(0.56, 32, 32);
+    // Main Helmet Shell (Bright Silver Armor Dome)
+    const helmetGeo = new THREE.SphereGeometry(0.58, 32, 32);
     helmetGeo.scale(1.0, 0.94, 1.05);
     const helmetMesh = new THREE.Mesh(helmetGeo, silverArmorMat);
     this.headGroup.add(helmetMesh);
 
-    // Deep Navy Rear Cowl / Trim
-    const rearCowlGeo = new THREE.SphereGeometry(0.57, 32, 16, Math.PI * 0.7, Math.PI * 0.6, 0, Math.PI * 0.8);
+    // Deep Navy Rear Cowl & Crown Lining
+    const rearCowlGeo = new THREE.SphereGeometry(0.59, 32, 16, Math.PI * 0.7, Math.PI * 0.6, 0, Math.PI * 0.8);
     const rearCowlMesh = new THREE.Mesh(rearCowlGeo, deepNavyMat);
     rearCowlMesh.position.set(0, 0.02, -0.05);
     this.headGroup.add(rearCowlMesh);
 
     // Front Visor Screen
-    const visorGeo = new THREE.SphereGeometry(0.49, 32, 16, Math.PI * 0.15, Math.PI * 0.7, Math.PI * 0.25, Math.PI * 0.5);
+    const visorGeo = new THREE.SphereGeometry(0.51, 32, 16, Math.PI * 0.15, Math.PI * 0.7, Math.PI * 0.25, Math.PI * 0.5);
     visorGeo.scale(1.02, 0.92, 1.08);
     const visorMesh = new THREE.Mesh(visorGeo, this.visorMaterial);
     visorMesh.position.set(0, 0.02, 0.04);
     this.headGroup.add(visorMesh);
 
-    // Visor Outer Metallic Bezel Ring (Deep Navy + Silver Trim)
-    const bezelGeo = new THREE.TorusGeometry(0.46, 0.028, 16, 48, Math.PI * 0.8);
+    // Visor Outer Bezel Ring (Deep Navy Frame with Silver Chamfer)
+    const bezelGeo = new THREE.TorusGeometry(0.48, 0.032, 16, 48, Math.PI * 0.8);
     const bezelMesh = new THREE.Mesh(bezelGeo, deepNavyMat);
-    bezelMesh.position.set(0, 0.02, 0.38);
+    bezelMesh.position.set(0, 0.02, 0.4);
     bezelMesh.rotation.x = Math.PI * 0.05;
     this.headGroup.add(bezelMesh);
 
-    // Crown Antenna Fin (Silver Base + Navy Trim)
-    const antennaBaseGeo = new THREE.BoxGeometry(0.05, 0.2, 0.3);
+    // Crown Antenna Fin (Silver Body + Navy Core)
+    const antennaBaseGeo = new THREE.BoxGeometry(0.06, 0.22, 0.32);
     const antennaBaseMesh = new THREE.Mesh(antennaBaseGeo, silverArmorMat);
-    antennaBaseMesh.position.set(0, 0.56, -0.05);
+    antennaBaseMesh.position.set(0, 0.58, -0.05);
     antennaBaseMesh.rotation.x = -Math.PI * 0.1;
     this.headGroup.add(antennaBaseMesh);
 
     // Glowing Antenna Crystal Tip
-    const crystalGeo = new THREE.OctahedronGeometry(0.065, 0);
+    const crystalGeo = new THREE.OctahedronGeometry(0.075, 0);
     this.antennaTip = new THREE.Mesh(crystalGeo, brightCyanGlowMat);
-    this.antennaTip.position.set(0, 0.72, -0.11);
+    this.antennaTip.position.set(0, 0.76, -0.12);
     this.headGroup.add(this.antennaTip);
 
-    // Side Ear Audio-Sensory Pods (Silver Outer + Navy Core)
-    const earGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.12, 24);
+    // Side Ear Audio-Sensory Pods (Silver Outer + Navy Rim)
+    const earGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.13, 24);
     earGeo.rotateZ(Math.PI / 2);
 
     const leftEar = new THREE.Mesh(earGeo, silverArmorMat);
-    leftEar.position.set(-0.55, 0, 0);
+    leftEar.position.set(-0.58, 0, 0);
     this.headGroup.add(leftEar);
 
     const rightEar = new THREE.Mesh(earGeo, silverArmorMat);
-    rightEar.position.set(0.55, 0, 0);
+    rightEar.position.set(0.58, 0, 0);
     this.headGroup.add(rightEar);
 
     // Ear Blue Glow Rings
-    const earRingGeo = new THREE.TorusGeometry(0.095, 0.018, 12, 24);
+    const earRingGeo = new THREE.TorusGeometry(0.1, 0.02, 12, 24);
     earRingGeo.rotateY(Math.PI / 2);
 
     const leftRing = new THREE.Mesh(earRingGeo, softBlueGlowMat);
-    leftRing.position.set(-0.62, 0, 0);
+    leftRing.position.set(-0.65, 0, 0);
     this.headGroup.add(leftRing);
 
     const rightRing = new THREE.Mesh(earRingGeo, softBlueGlowMat);
-    rightRing.position.set(0.62, 0, 0);
+    rightRing.position.set(0.65, 0, 0);
     this.headGroup.add(rightRing);
 
     this.root.add(this.headGroup);
 
-    // 4. Floating Torso Assembly (Silver Armor Chest + Deep Navy Core)
+    // 4. Floating Torso Assembly (Silver Armor Chest + Deep Navy Insets)
     this.torsoGroup = new THREE.Group();
     this.torsoGroup.position.set(0, 0.15, 0);
 
     // Segmented Neck Collar (Deep Navy)
-    const collarGeo = new THREE.CylinderGeometry(0.25, 0.3, 0.15, 24);
+    const collarGeo = new THREE.CylinderGeometry(0.26, 0.32, 0.16, 24);
     const collarMesh = new THREE.Mesh(collarGeo, deepNavyMat);
-    collarMesh.position.set(0, 0.65, 0);
+    collarMesh.position.set(0, 0.66, 0);
     this.torsoGroup.add(collarMesh);
 
-    // Main Chest Armor Plate (Bright Silver)
-    const chestGeo = new THREE.CylinderGeometry(0.44, 0.3, 0.68, 24);
-    chestGeo.scale(1.0, 1.0, 0.76);
+    // Main Chest Armor Shell (Bright Silver)
+    const chestGeo = new THREE.CylinderGeometry(0.46, 0.32, 0.72, 24);
+    chestGeo.scale(1.0, 1.0, 0.78);
     const chestMesh = new THREE.Mesh(chestGeo, silverArmorMat);
     chestMesh.position.set(0, 0.3, 0);
     this.torsoGroup.add(chestMesh);
 
     // Deep Navy Inset Breastplate Panel
-    const chestPlateGeo = new THREE.BoxGeometry(0.4, 0.36, 0.12);
+    const chestPlateGeo = new THREE.BoxGeometry(0.42, 0.38, 0.14);
     const chestPlateMesh = new THREE.Mesh(chestPlateGeo, deepNavyMat);
-    chestPlateMesh.position.set(0, 0.35, 0.24);
+    chestPlateMesh.position.set(0, 0.35, 0.25);
     this.torsoGroup.add(chestPlateMesh);
 
-    // Chest Glowing Arc Core (Cyan/Blue Reactor)
-    const coreOuterGeo = new THREE.TorusGeometry(0.12, 0.022, 16, 32);
+    // Chest Glowing Arc Reactor Core (Glowing Cyan with Silver Bezel)
+    const coreOuterGeo = new THREE.TorusGeometry(0.13, 0.024, 16, 32);
     const coreOuterMesh = new THREE.Mesh(coreOuterGeo, silverArmorMat);
-    coreOuterMesh.position.set(0, 0.35, 0.31);
+    coreOuterMesh.position.set(0, 0.35, 0.33);
     this.torsoGroup.add(coreOuterMesh);
 
-    const coreInnerGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.02, 24);
+    const coreInnerGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.02, 24);
     coreInnerGeo.rotateX(Math.PI / 2);
     this.chestCore = new THREE.Mesh(coreInnerGeo, brightCyanGlowMat);
-    this.chestCore.position.set(0, 0.35, 0.31);
+    this.chestCore.position.set(0, 0.35, 0.33);
     this.torsoGroup.add(this.chestCore);
 
     // Lower Levitator Thruster Ring (Silver + Blue Glow)
-    const levitatorGeo = new THREE.TorusGeometry(0.24, 0.03, 16, 32);
+    const levitatorGeo = new THREE.TorusGeometry(0.26, 0.032, 16, 32);
     levitatorGeo.rotateX(Math.PI / 2);
     const levitatorMesh = new THREE.Mesh(levitatorGeo, slateTrimMat);
-    levitatorMesh.position.set(0, -0.06, 0);
+    levitatorMesh.position.set(0, -0.07, 0);
     this.torsoGroup.add(levitatorMesh);
 
-    const levitatorGlowGeo = new THREE.RingGeometry(0.14, 0.24, 24);
+    const levitatorGlowGeo = new THREE.RingGeometry(0.15, 0.26, 24);
     levitatorGlowGeo.rotateX(Math.PI / 2);
     const levitatorGlowMesh = new THREE.Mesh(levitatorGlowGeo, softBlueGlowMat);
-    levitatorGlowMesh.position.set(0, -0.07, 0);
+    levitatorGlowMesh.position.set(0, -0.08, 0);
     this.torsoGroup.add(levitatorGlowMesh);
 
     this.root.add(this.torsoGroup);
 
     // 5. Floating Arms / Hands (Left & Right)
     this.leftArm = this.createArm(true, silverArmorMat, deepNavyMat, brightCyanGlowMat);
-    this.leftArm.position.set(-0.72, 0.32, 0.08);
+    this.leftArm.position.set(-0.76, 0.32, 0.08);
     this.root.add(this.leftArm);
 
     this.rightArm = this.createArm(false, silverArmorMat, deepNavyMat, brightCyanGlowMat);
-    this.rightArm.position.set(0.72, 0.32, 0.08);
+    this.rightArm.position.set(0.76, 0.32, 0.08);
     this.root.add(this.rightArm);
 
     // Initial Face Render
@@ -220,30 +220,30 @@ export class RobotModel {
     const armGroup = new THREE.Group();
 
     // Floating Shoulder Pauldron (Bright Silver Armor)
-    const pauldronGeo = new THREE.SphereGeometry(0.16, 16, 16);
-    pauldronGeo.scale(1.1, 0.8, 1.0);
+    const pauldronGeo = new THREE.SphereGeometry(0.18, 16, 16);
+    pauldronGeo.scale(1.15, 0.85, 1.05);
     const pauldronMesh = new THREE.Mesh(pauldronGeo, silverMat);
-    pauldronMesh.position.set(isLeft ? 0.04 : -0.04, 0.12, 0);
+    pauldronMesh.position.set(isLeft ? 0.04 : -0.04, 0.14, 0);
     armGroup.add(pauldronMesh);
 
     // Forearm Shell (Deep Navy with Silver Cap)
-    const forearmGeo = new THREE.CapsuleGeometry(0.08, 0.18, 8, 16);
+    const forearmGeo = new THREE.CapsuleGeometry(0.09, 0.2, 8, 16);
     forearmGeo.rotateZ(isLeft ? Math.PI * 0.1 : -Math.PI * 0.1);
     const forearmMesh = new THREE.Mesh(forearmGeo, navyMat);
     armGroup.add(forearmMesh);
 
     // Forearm Silver Stripe
-    const bandGeo = new THREE.TorusGeometry(0.085, 0.015, 12, 24);
+    const bandGeo = new THREE.TorusGeometry(0.095, 0.016, 12, 24);
     bandGeo.rotateX(Math.PI / 2);
     const bandMesh = new THREE.Mesh(bandGeo, silverMat);
     bandMesh.position.set(0, 0.02, 0);
     armGroup.add(bandMesh);
 
     // Hand Emitter Core (Glowing Cyan)
-    const palmGeo = new THREE.RingGeometry(0.025, 0.055, 16);
+    const palmGeo = new THREE.RingGeometry(0.028, 0.06, 16);
     palmGeo.rotateY(isLeft ? -Math.PI * 0.4 : Math.PI * 0.4);
     const palmGlow = new THREE.Mesh(palmGeo, glowMat);
-    palmGlow.position.set(isLeft ? 0.05 : -0.05, -0.1, 0.05);
+    palmGlow.position.set(isLeft ? 0.05 : -0.05, -0.11, 0.05);
     armGroup.add(palmGlow);
 
     return armGroup;
@@ -257,25 +257,25 @@ export class RobotModel {
 
     ctx.clearRect(0, 0, w, h);
 
-    // Deep dark background for rich contrast
-    ctx.fillStyle = '#040810';
+    // Deep dark contrast background
+    ctx.fillStyle = '#050D18';
     ctx.fillRect(0, 0, w, h);
 
-    // Bright cyan glow
-    const cyanLight = '#00E5FF';
+    // Vivid Cyan & Sky Blue Glow
+    const cyanLight = '#00F0FF';
     const blueGlow = '#38BDF8';
 
     ctx.shadowColor = blueGlow;
-    ctx.shadowBlur = 24;
+    ctx.shadowBlur = 30;
     ctx.fillStyle = cyanLight;
     ctx.strokeStyle = cyanLight;
-    ctx.lineWidth = 11;
+    ctx.lineWidth = 13;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
     const eyeCenterY = h * 0.48;
-    const leftEyeX = w * 0.34;
-    const rightEyeX = w * 0.66;
+    const leftEyeX = w * 0.33;
+    const rightEyeX = w * 0.67;
     const blinkScale = 1 - this.blinkProgress;
 
     ctx.save();
@@ -290,13 +290,12 @@ export class RobotModel {
 
         if (blinkScale > 0.3) {
           ctx.beginPath();
-          ctx.arc(w * 0.5, eyeCenterY + 40, 30, Math.PI * 0.15, Math.PI * 0.85, false);
+          ctx.arc(w * 0.5, eyeCenterY + 42, 34, Math.PI * 0.15, Math.PI * 0.85, false);
           ctx.stroke();
         }
         break;
 
       case 'curious': {
-        // Focused circular optics tracking cursor offset
         const pOffsetX = pupilX * 18;
         const pOffsetY = pupilY * 14;
 
@@ -305,7 +304,7 @@ export class RobotModel {
 
         if (blinkScale > 0.4) {
           ctx.beginPath();
-          ctx.arc(w * 0.5 + pOffsetX * 0.4, eyeCenterY + 44, 6, 0, Math.PI * 2);
+          ctx.arc(w * 0.5 + pOffsetX * 0.4, eyeCenterY + 44, 7, 0, Math.PI * 2);
           ctx.fill();
         }
         break;
@@ -314,8 +313,8 @@ export class RobotModel {
       case 'idle':
       default:
         // Calm horizontal rounded visor eyes
-        this.drawPillEye(ctx, leftEyeX + pupilX * 8, eyeCenterY + pupilY * 6, 50, 20 * blinkScale);
-        this.drawPillEye(ctx, rightEyeX + pupilX * 8, eyeCenterY + pupilY * 6, 50, 20 * blinkScale);
+        this.drawPillEye(ctx, leftEyeX + pupilX * 8, eyeCenterY + pupilY * 6, 54, 22 * blinkScale);
+        this.drawPillEye(ctx, rightEyeX + pupilX * 8, eyeCenterY + pupilY * 6, 54, 22 * blinkScale);
         break;
     }
 
@@ -326,7 +325,7 @@ export class RobotModel {
   private drawSmilingEye(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
     if (scale <= 0.1) return;
     ctx.beginPath();
-    ctx.arc(x, y + 10, 26, Math.PI * 1.15, Math.PI * 1.85, false);
+    ctx.arc(x, y + 10, 28, Math.PI * 1.15, Math.PI * 1.85, false);
     ctx.stroke();
   }
 
@@ -340,11 +339,11 @@ export class RobotModel {
   ) {
     if (scale <= 0.1) return;
     ctx.beginPath();
-    ctx.ellipse(x, y, 26, 26 * scale, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y, 28, 28 * scale, 0, 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.arc(x + pX, y + pY * scale, 10 * scale, 0, Math.PI * 2);
+    ctx.arc(x + pX, y + pY * scale, 11 * scale, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -367,7 +366,7 @@ export class RobotModel {
     ctx.fill();
   }
 
-  // Update Animation Loop
+  // Master Animation Update Loop
   public update(
     time: number,
     delta: number,
@@ -393,11 +392,11 @@ export class RobotModel {
 
     // Head tracking toward cursor
     if (cursor.isNear) {
-      this.targetHeadRotY = cursor.normX * 0.6;
-      this.targetHeadRotX = -cursor.normY * 0.4;
+      this.targetHeadRotY = cursor.normX * 0.55;
+      this.targetHeadRotX = -cursor.normY * 0.35;
     } else {
-      this.targetHeadRotY = cursor.normX * 0.3 + Math.sin(time * 0.7) * 0.08;
-      this.targetHeadRotX = -cursor.normY * 0.2 + Math.cos(time * 0.6) * 0.05;
+      this.targetHeadRotY = cursor.normX * 0.25 + Math.sin(time * 0.7) * 0.06;
+      this.targetHeadRotX = -cursor.normY * 0.18 + Math.cos(time * 0.6) * 0.04;
     }
 
     const lerpFactor = 0.08;
@@ -409,19 +408,18 @@ export class RobotModel {
     this.drawVisorFace(this.currentExpression, cursor.normX, cursor.normY);
 
     // Floating idle physics
-    const floatY = Math.sin(time * 1.8) * 0.06;
-    const breatheY = Math.cos(time * 1.4) * 0.018;
+    const floatY = Math.sin(time * 1.8) * 0.05;
+    const breatheY = Math.cos(time * 1.4) * 0.015;
 
-    this.headGroup.position.y = 0.96 + floatY * 0.75;
+    this.headGroup.position.y = 0.98 + floatY * 0.75;
     this.torsoGroup.position.y = 0.15 + floatY * 0.35 + breatheY;
 
     // Floating arms physics
-    const armWave = Math.sin(time * 2.2) * 0.04;
+    const armWave = Math.sin(time * 2.2) * 0.035;
     this.leftArm.position.y = 0.32 + floatY * 0.4 - armWave;
     this.rightArm.position.y = 0.32 + floatY * 0.4 + armWave;
 
     if (effectiveExpression === 'smile' || effectiveExpression === 'greet') {
-      // Cheerful subtle greeting hand posture
       this.rightArm.position.y += 0.08;
       this.rightArm.rotation.z = -0.22 + Math.sin(time * 3.5) * 0.04;
     } else {
@@ -433,8 +431,8 @@ export class RobotModel {
     this.visorMaterial.emissiveIntensity = pulse;
     (this.chestCore.material as THREE.MeshBasicMaterial).color.setRGB(
       0.0,
-      0.7 * pulse,
-      0.9 * pulse
+      0.8 * pulse,
+      1.0 * pulse
     );
   }
 

@@ -25,10 +25,10 @@ export const Hero: React.FC<HeroProps> = ({ onExploreWork, onContactClick }) => 
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-6 xl:gap-12 w-full">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8 xl:gap-12 w-full">
           
           {/* Typography & CTAs Column on Left Side */}
-          <div className="w-full lg:max-w-xl xl:max-w-2xl 2xl:max-w-3xl flex flex-col items-center lg:items-start text-center lg:text-left z-10">
+          <div className="w-full lg:flex-1 min-w-0 max-w-xl xl:max-w-2xl 2xl:max-w-3xl flex flex-col items-center lg:items-start text-center lg:text-left z-10">
             
             {/* Main Headline */}
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl 2xl:text-[4.25rem] lg:font-apple font-extrabold tracking-tight lg:tracking-[-0.03em] text-text-primary leading-[1.08] lg:leading-[1.07] mb-5 lg:mb-6">
@@ -89,7 +89,7 @@ export const Hero: React.FC<HeroProps> = ({ onExploreWork, onContactClick }) => 
           </div>
 
           {/* High-Contrast Silver & Deep Navy 3D AI Robot (Desktop Only, Contained in Hero) */}
-          <div className="hidden lg:flex items-center justify-center shrink-0 z-10">
+          <div className="hidden lg:flex items-center justify-center shrink-0 lg:w-[380px] xl:w-[460px] 2xl:w-[500px] z-10">
             <HeroRobot />
           </div>
 
