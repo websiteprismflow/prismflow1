@@ -51,6 +51,17 @@ export default {
           'Roboto',
           'sans-serif'
         ],
+        apple: [
+          '"SF Pro Display"',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"SF Pro Text"',
+          '"SF Pro"',
+          '"Helvetica Neue"',
+          'Helvetica',
+          'Arial',
+          'sans-serif'
+        ]
       },
       backgroundImage: {
         'prism-gradient': 'linear-gradient(180deg, #0077B6 0%, #18B8C4 50%, #0F8F9C 100%)',

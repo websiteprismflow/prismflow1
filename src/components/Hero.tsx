@@ -27,10 +27,10 @@ export const Hero: React.FC<HeroProps> = ({ onExploreWork, onContactClick }) => 
         <div className="flex flex-col items-center lg:items-start w-full">
           
           {/* Typography & CTAs Column on Left Side for Desktop */}
-          <div className="w-full max-w-2xl lg:max-w-4xl xl:max-w-5xl flex flex-col items-center lg:items-start text-center lg:text-left z-10">
+          <div className="w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl flex flex-col items-center lg:items-start text-center lg:text-left z-10">
             
             {/* Main Headline */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-[5.5rem] font-extrabold tracking-tight text-text-primary leading-[1.08] lg:leading-[1.04] mb-5 lg:mb-7">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl 2xl:text-[4.25rem] lg:font-apple font-extrabold tracking-tight lg:tracking-[-0.03em] text-text-primary leading-[1.08] lg:leading-[1.07] mb-5 lg:mb-6">
               <span className="block">WE BUILD THINGS</span>
               {/* Signature Vertical Gradient Lighting */}
               <span className="block my-1 text-prism-gradient tracking-tight font-black">
@@ -40,48 +40,48 @@ export const Hero: React.FC<HeroProps> = ({ onExploreWork, onContactClick }) => 
             </h1>
 
             {/* Subheading */}
-            <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-text-secondary max-w-xl lg:max-w-3xl leading-relaxed lg:leading-relaxed mb-6 lg:mb-10 font-normal">
+            <p className="text-sm sm:text-base md:text-lg lg:text-lg xl:text-xl lg:font-apple text-text-secondary max-w-xl lg:max-w-2xl leading-relaxed lg:leading-relaxed mb-6 lg:mb-8 font-normal lg:tracking-[-0.01em]">
               From high-quality websites to AI agents and smart automation, we create digital solutions that make your business better, simpler, and ready for what’s next.
             </p>
 
             {/* Dual CTAs */}
-            <div className="flex flex-col sm:flex-row items-center gap-3.5 lg:gap-5 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row items-center gap-3.5 lg:gap-4 w-full sm:w-auto lg:font-apple">
               <button
                 onClick={onContactClick}
-                className="w-full sm:w-auto px-7 py-3.5 lg:px-9 lg:py-4 rounded-full bg-gradient-to-b from-white/15 to-white/5 border border-white/20 text-text-primary font-semibold text-sm lg:text-base hover:border-mint-primary/50 hover:shadow-mint-glow transition-all flex items-center justify-center gap-2 group neu-button cursor-pointer"
+                className="w-full sm:w-auto px-7 py-3.5 lg:px-7 lg:py-3.5 rounded-full bg-gradient-to-b from-white/15 to-white/5 border border-white/20 text-text-primary font-semibold text-sm lg:text-sm hover:border-mint-primary/50 hover:shadow-mint-glow transition-all flex items-center justify-center gap-2 group neu-button cursor-pointer"
               >
                 <span>Let's Build</span>
-                <ArrowRight size={18} className="text-mint-primary group-hover:translate-x-1 transition-transform" />
+                <ArrowRight size={16} className="text-mint-primary group-hover:translate-x-1 transition-transform" />
               </button>
 
               <button
                 onClick={onExploreWork}
-                className="w-full sm:w-auto px-6 py-3.5 lg:px-8 lg:py-4 rounded-full bg-white/[0.03] border border-white/10 text-text-secondary hover:text-text-primary hover:bg-white/[0.06] hover:border-white/20 font-medium text-sm lg:text-base transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto px-6 py-3.5 lg:px-6 lg:py-3.5 rounded-full bg-white/[0.03] border border-white/10 text-text-secondary hover:text-text-primary hover:bg-white/[0.06] hover:border-white/20 font-medium text-sm lg:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Compass size={18} className="text-cyan-secondary" />
+                <Compass size={16} className="text-cyan-secondary" />
                 <span>Explore Our Work</span>
               </button>
             </div>
 
             {/* Subtle Capability Micro-Pills */}
-            <div className="mt-8 lg:mt-12 pt-6 lg:pt-8 border-t border-white/[0.06] grid grid-cols-3 gap-4 lg:gap-8 w-full max-w-md lg:max-w-2xl">
+            <div className="mt-8 lg:mt-10 pt-6 lg:pt-6 border-t border-white/[0.06] grid grid-cols-3 gap-4 lg:gap-6 w-full max-w-md lg:max-w-xl lg:font-apple">
               <div className="flex flex-col items-center lg:items-start">
-                <span className="text-xs lg:text-sm xl:text-base font-semibold text-text-primary flex items-center gap-1.5">
-                  <Sparkles size={14} className="text-mint-primary shrink-0" /> Autonomous
+                <span className="text-xs lg:text-xs xl:text-sm font-semibold text-text-primary flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-mint-primary shrink-0" /> Autonomous
                 </span>
-                <span className="text-[11px] lg:text-xs text-text-muted mt-0.5">Lead Qualification</span>
+                <span className="text-[11px] lg:text-[11px] xl:text-xs text-text-muted mt-0.5">Lead Qualification</span>
               </div>
               <div className="flex flex-col items-center lg:items-start">
-                <span className="text-xs lg:text-sm xl:text-base font-semibold text-text-primary flex items-center gap-1.5">
-                  <Cpu size={14} className="text-cyan-secondary shrink-0" /> Agentic
+                <span className="text-xs lg:text-xs xl:text-sm font-semibold text-text-primary flex items-center gap-1.5">
+                  <Cpu size={13} className="text-cyan-secondary shrink-0" /> Agentic
                 </span>
-                <span className="text-[11px] lg:text-xs text-text-muted mt-0.5">Multi-Step Workflows</span>
+                <span className="text-[11px] lg:text-[11px] xl:text-xs text-text-muted mt-0.5">Multi-Step Workflows</span>
               </div>
               <div className="flex flex-col items-center lg:items-start">
-                <span className="text-xs lg:text-sm xl:text-base font-semibold text-text-primary flex items-center gap-1.5">
-                  <Layers size={14} className="text-cyan-highlight shrink-0" /> High Speed
+                <span className="text-xs lg:text-xs xl:text-sm font-semibold text-text-primary flex items-center gap-1.5">
+                  <Layers size={13} className="text-cyan-highlight shrink-0" /> High Speed
                 </span>
-                <span className="text-[11px] lg:text-xs text-text-muted mt-0.5">Sub-100ms UX</span>
+                <span className="text-[11px] lg:text-[11px] xl:text-xs text-text-muted mt-0.5">Sub-100ms UX</span>
               </div>
             </div>
 
