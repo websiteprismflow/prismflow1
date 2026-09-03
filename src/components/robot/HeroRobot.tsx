@@ -2,6 +2,14 @@ import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { RobotModel } from './RobotModel';
 
+type SectionState = 'hero' | 'services' | 'portfolio';
+
+const SECTION_TEXTS: Record<SectionState, string> = {
+  hero: 'Hi, welcome to PrismFlow World 👋',
+  services: "Here's what we build for you ✨",
+  portfolio: "Things we've brought to life 🚀",
+};
+
 export const HeroRobot: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -13,7 +21,7 @@ export const HeroRobot: React.FC = () => {
   });
 
   // Current active section text state
-  const [activeText, setActiveText] = useState<'hero' | 'services'>('hero');
+  const [activeText, setActiveText] = useState<SectionState>('hero');
   const [textOpacity, setTextOpacity] = useState(1);
 
   // 1. Strictly Desktop-Only Guard
@@ -102,7 +110,7 @@ export const HeroRobot: React.FC = () => {
 
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
 
-    // Render loop & Smooth Scroll Positioning
+    // Render loop & Smooth Scroll Positioning across 3 Sections
     let animationFrameId: number;
     const clock = new THREE.Clock();
     let isVisible = true;
@@ -111,7 +119,7 @@ export const HeroRobot: React.FC = () => {
     let currentX = -9999;
     let currentY = -9999;
     let currentOpacity = 1;
-    let lastSection: 'hero' | 'services' = 'hero';
+    let lastSection: SectionState = 'hero';
 
     const handleVisibility = () => {
       isVisible = !document.hidden;
@@ -126,32 +134,51 @@ export const HeroRobot: React.FC = () => {
       const delta = Math.min(clock.getDelta(), 0.1);
       const time = clock.getElapsedTime();
 
-      // 1. Calculate Target Position between Hero and Services Anchor
+      // 1. Calculate Target Position between Hero -> Services -> Portfolio Anchors
       const heroTarget = document.getElementById('hero-robot-target');
       const servicesTarget = document.getElementById('services-robot-target');
+      const portfolioTarget = document.getElementById('portfolio-robot-target');
 
-      if (heroTarget && servicesTarget) {
+      if (heroTarget && servicesTarget && portfolioTarget) {
         const heroRect = heroTarget.getBoundingClientRect();
         const servicesRect = servicesTarget.getBoundingClientRect();
+        const portfolioRect = portfolioTarget.getBoundingClientRect();
 
         const windowH = window.innerHeight;
-        // Start moving when services is entering the viewport
-        const startY = windowH * 0.85;
-        const endY = 160; // Settled position in Services
-        let t = (startY - servicesRect.top) / (startY - endY);
-        t = Math.max(0, Math.min(1, t));
+        const settleY = 160;
 
-        // Smooth cubic ease
-        const smoothT = t * t * (3 - 2 * t);
+        // Transition 1: Hero -> Services
+        const startY1 = windowH * 0.85;
+        let t1 = (startY1 - servicesRect.top) / (startY1 - settleY);
+        t1 = Math.max(0, Math.min(1, t1));
+        const smoothT1 = t1 * t1 * (3 - 2 * t1);
 
-        // Interpolate target position
-        const targetX = heroRect.left + (servicesRect.left - heroRect.left) * smoothT;
-        const targetY = heroRect.top + (servicesRect.top - heroRect.top) * smoothT;
+        // Transition 2: Services -> Portfolio
+        const startY2 = windowH * 0.85;
+        let t2 = (startY2 - portfolioRect.top) / (startY2 - settleY);
+        t2 = Math.max(0, Math.min(1, t2));
+        const smoothT2 = t2 * t2 * (3 - 2 * t2);
 
-        // Opacity: Fades out smoothly when user scrolls past Services
+        let targetX: number;
+        let targetY: number;
+        let currentSection: SectionState = 'hero';
+
+        if (t2 > 0) {
+          // Between Services and Portfolio
+          targetX = servicesRect.left + (portfolioRect.left - servicesRect.left) * smoothT2;
+          targetY = servicesRect.top + (portfolioRect.top - servicesRect.top) * smoothT2;
+          currentSection = smoothT2 > 0.5 ? 'portfolio' : 'services';
+        } else {
+          // Between Hero and Services
+          targetX = heroRect.left + (servicesRect.left - heroRect.left) * smoothT1;
+          targetY = heroRect.top + (servicesRect.top - heroRect.top) * smoothT1;
+          currentSection = smoothT1 > 0.5 ? 'services' : 'hero';
+        }
+
+        // Opacity: Fades out smoothly when user scrolls past Portfolio
         let targetOpacity = 1;
-        if (servicesRect.bottom < 320) {
-          targetOpacity = Math.max(0, Math.min(1, (servicesRect.bottom - 40) / 260));
+        if (portfolioRect.bottom < 320) {
+          targetOpacity = Math.max(0, Math.min(1, (portfolioRect.bottom - 40) / 260));
         }
 
         // Initialize position on first frame without sudden jump
@@ -171,11 +198,9 @@ export const HeroRobot: React.FC = () => {
         wrapper.style.opacity = `${currentOpacity}`;
         wrapper.style.visibility = currentOpacity > 0.01 ? 'visible' : 'hidden';
 
-        // 2. Smooth Text Transition
-        const currentSection = smoothT > 0.5 ? 'services' : 'hero';
+        // 2. Smooth Text Crossfade between sections
         if (currentSection !== lastSection) {
           lastSection = currentSection;
-          // Fade text out slightly, swap text, and fade in
           setTextOpacity(0);
           setTimeout(() => {
             setActiveText(currentSection);
@@ -243,9 +268,7 @@ export const HeroRobot: React.FC = () => {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00F0FF]" />
             </span>
             <span className="text-xs font-medium text-slate-100 tracking-tight">
-              {activeText === 'hero'
-                ? 'Hi, welcome to PrismFlow World 👋'
-                : "Here's what we build for you ✨"}
+              {SECTION_TEXTS[activeText]}
             </span>
           </div>
         </div>
