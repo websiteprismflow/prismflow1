@@ -10,6 +10,7 @@ export class RobotModel {
   public rightArm: THREE.Group;
   public chestShield: THREE.Mesh;
   public topCrest: THREE.Mesh;
+  public visorMesh: THREE.Mesh;
 
   private visorCanvas: HTMLCanvasElement;
   private visorCtx: CanvasRenderingContext2D;
@@ -63,9 +64,9 @@ export class RobotModel {
 
     // Deep Royal Blue Visor Screen Material with Emissive Glow
     this.visorMaterial = new THREE.MeshStandardMaterial({
-      color: 0x09225E,
+      color: 0x0A266E,
       roughness: 0.12,
-      metalness: 0.12,
+      metalness: 0.15,
       emissive: 0xffffff,
       emissiveMap: this.visorTexture,
       emissiveIntensity: 3.2,
@@ -76,35 +77,53 @@ export class RobotModel {
       color: 0x00F0FF,
     });
 
-    // 3. Head Assembly
+    // 3. Head Assembly (Facing Forward +Z directly toward the camera/visitor)
     this.headGroup = new THREE.Group();
     this.headGroup.position.set(0, 0.68, 0);
 
-    // Main Smooth Rounded White Head Sphere
-    const headGeo = new THREE.SphereGeometry(0.58, 36, 36);
-    headGeo.scale(1.08, 0.98, 1.05);
+    // Main Smooth Rounded White Head Sphere (slight flatten in front Z so visor is completely proud)
+    const headGeo = new THREE.SphereGeometry(0.54, 36, 36);
+    headGeo.scale(1.06, 0.98, 0.92);
     const headMesh = new THREE.Mesh(headGeo, whiteBodyMat);
     this.headGroup.add(headMesh);
 
     // Top Head Fin / Crest (Rounded rectangular block on crown)
-    const crestGeo = new THREE.BoxGeometry(0.18, 0.14, 0.34);
+    const crestGeo = new THREE.BoxGeometry(0.18, 0.13, 0.32);
     this.topCrest = new THREE.Mesh(crestGeo, whiteBodyMat);
-    this.topCrest.position.set(0, 0.56, -0.02);
-    this.topCrest.rotation.x = -Math.PI * 0.06;
+    this.topCrest.position.set(0, 0.52, -0.04);
+    this.topCrest.rotation.x = -Math.PI * 0.08;
     this.headGroup.add(this.topCrest);
 
-    // Curved Deep Blue Front Visor Screen
-    const visorGeo = new THREE.SphereGeometry(0.49, 36, 20, Math.PI * 0.14, Math.PI * 0.72, Math.PI * 0.22, Math.PI * 0.56);
-    visorGeo.scale(1.05, 0.95, 1.08);
-    const visorMesh = new THREE.Mesh(visorGeo, this.visorMaterial);
-    visorMesh.position.set(0, 0.01, 0.05);
-    this.headGroup.add(visorMesh);
+    // Curved Front Deep Blue Visor Face Screen (Facing +Z directly toward the visitor!)
+    const visorGeo = new THREE.SphereGeometry(0.46, 36, 24, 0, Math.PI * 2, 0, Math.PI * 0.52);
+    visorGeo.scale(1.04, 0.82, 0.48);
+    visorGeo.rotateX(Math.PI / 2); // Points dome front (+Z) toward camera!
 
-    // Subtle Neon Cyan Border Ring around Visor (Matches reference rim glow)
-    const borderGeo = new THREE.TorusGeometry(0.46, 0.016, 16, 48, Math.PI * 0.78);
+    // Custom Planar UV Mapping so eye expressions render with zero distortion
+    visorGeo.computeBoundingBox();
+    const box = visorGeo.boundingBox!;
+    const pos = visorGeo.attributes.position;
+    const uv = visorGeo.attributes.uv;
+    const width = box.max.x - box.min.x;
+    const height = box.max.y - box.min.y;
+
+    for (let i = 0; i < pos.count; i++) {
+      const u = (pos.getX(i) - box.min.x) / width;
+      const v = (pos.getY(i) - box.min.y) / height;
+      uv.setXY(i, u, v);
+    }
+    uv.needsUpdate = true;
+
+    this.visorMesh = new THREE.Mesh(visorGeo, this.visorMaterial);
+    // Positioned at z = 0.22 so its apex reaches z = 0.60, proudly in front of the white head (0.49)
+    this.visorMesh.position.set(0, 0.02, 0.22);
+    this.headGroup.add(this.visorMesh);
+
+    // Subtle Neon Cyan Border Ring around Visor (Highlights visor contour)
+    const borderGeo = new THREE.TorusGeometry(0.44, 0.016, 16, 48);
+    borderGeo.scale(1.02, 0.8, 1.0);
     const borderMesh = new THREE.Mesh(borderGeo, neonCyanBorderMat);
-    borderMesh.position.set(0, 0.015, 0.39);
-    borderMesh.rotation.x = Math.PI * 0.05;
+    borderMesh.position.set(0, 0.02, 0.42);
     this.headGroup.add(borderMesh);
 
     // Headphone-Style Ear Cups (Left & Right)
@@ -112,11 +131,11 @@ export class RobotModel {
     earGeo.rotateZ(Math.PI / 2);
 
     const leftEar = new THREE.Mesh(earGeo, whiteBodyMat);
-    leftEar.position.set(-0.58, 0.04, 0);
+    leftEar.position.set(-0.56, 0.04, 0);
     this.headGroup.add(leftEar);
 
     const rightEar = new THREE.Mesh(earGeo, whiteBodyMat);
-    rightEar.position.set(0.58, 0.04, 0);
+    rightEar.position.set(0.56, 0.04, 0);
     this.headGroup.add(rightEar);
 
     // Inner Dark Navy Recess on Ear Cups
@@ -124,23 +143,23 @@ export class RobotModel {
     earRecessGeo.rotateZ(Math.PI / 2);
 
     const leftRecess = new THREE.Mesh(earRecessGeo, darkNavyMat);
-    leftRecess.position.set(-0.64, 0.04, 0);
+    leftRecess.position.set(-0.62, 0.04, 0);
     this.headGroup.add(leftRecess);
 
     const rightRecess = new THREE.Mesh(earRecessGeo, darkNavyMat);
-    rightRecess.position.set(0.64, 0.04, 0);
+    rightRecess.position.set(0.62, 0.04, 0);
     this.headGroup.add(rightRecess);
 
     // Upright Teal/Cyan Ear Fins on top of Ear Cups (Signature detail from reference image!)
     const earFinGeo = new THREE.BoxGeometry(0.05, 0.28, 0.16);
 
     const leftEarFin = new THREE.Mesh(earFinGeo, tealAccentMat);
-    leftEarFin.position.set(-0.6, 0.24, 0);
+    leftEarFin.position.set(-0.58, 0.24, 0);
     leftEarFin.rotation.z = -Math.PI * 0.06;
     this.headGroup.add(leftEarFin);
 
     const rightEarFin = new THREE.Mesh(earFinGeo, tealAccentMat);
-    rightEarFin.position.set(0.6, 0.24, 0);
+    rightEarFin.position.set(0.58, 0.24, 0);
     rightEarFin.rotation.z = Math.PI * 0.06;
     this.headGroup.add(rightEarFin);
 
@@ -175,7 +194,7 @@ export class RobotModel {
     this.root.add(this.bodyGroup);
 
     // 5. Arms Matching Reference Image (Left arm resting, Right arm waving!)
-    // Left Arm (Smooth rounded white mitten arm resting downward)
+    // Left Arm (Smooth rounded white mitten arm resting downward on viewer's left -X)
     this.leftArm = new THREE.Group();
     const leftArmGeo = new THREE.CapsuleGeometry(0.09, 0.26, 8, 16);
     const leftArmMesh = new THREE.Mesh(leftArmGeo, whiteBodyMat);
@@ -185,7 +204,7 @@ export class RobotModel {
     this.leftArm.rotation.set(0.15, 0, 0.42);
     this.root.add(this.leftArm);
 
-    // Right Arm (Waving Arm raised up in cheerful friendly wave!)
+    // Right Arm (Waving Arm raised up in cheerful friendly wave on viewer's right +X)
     this.rightArm = new THREE.Group();
     const rightArmGeo = new THREE.CapsuleGeometry(0.095, 0.28, 8, 16);
     const rightArmMesh = new THREE.Mesh(rightArmGeo, whiteBodyMat);
@@ -219,7 +238,7 @@ export class RobotModel {
     ctx.shadowBlur = 28;
     ctx.fillStyle = eyeColor;
     ctx.strokeStyle = eyeColor;
-    ctx.lineWidth = 16;
+    ctx.lineWidth = 18;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -313,14 +332,16 @@ export class RobotModel {
       }
     }
 
-    // Natural, subtle head turn and inquisitiveness
+    // Natural, subtle head turn toward the cursor / screen content
+    // Note: When cursor is to the left (normX < 0), targetHeadRotY must be negative to turn left
+    // When cursor is above (normY < 0), targetHeadRotX must be negative to tilt up
     if (cursor.isNear) {
-      this.targetHeadRotY = cursor.normX * 0.42;
-      this.targetHeadRotX = -cursor.normY * 0.22;
-      this.targetHeadRotZ = 0.06;
+      this.targetHeadRotY = cursor.normX * 0.45;
+      this.targetHeadRotX = cursor.normY * 0.22;
+      this.targetHeadRotZ = cursor.normX * 0.08;
     } else {
-      this.targetHeadRotY = cursor.normX * 0.16 + Math.sin(time * 0.6) * 0.04;
-      this.targetHeadRotX = -cursor.normY * 0.1 + Math.cos(time * 0.5) * 0.03;
+      this.targetHeadRotY = cursor.normX * 0.2 + Math.sin(time * 0.6) * 0.04;
+      this.targetHeadRotX = cursor.normY * 0.12 + Math.cos(time * 0.5) * 0.03;
       this.targetHeadRotZ = Math.sin(time * 0.4) * 0.02;
     }
 
