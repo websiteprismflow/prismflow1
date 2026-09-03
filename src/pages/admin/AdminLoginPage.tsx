@@ -1,33 +1,39 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Lock, Mail, Shield, Sparkles, ArrowLeft, Key } from 'lucide-react';
+import { ArrowRight, Lock, Mail, ArrowLeft, Loader2 } from 'lucide-react';
 import { authService } from '../../services/authService';
 
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('admin@prismflow.tech');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!email.trim() || !password) {
+      setError('Please enter your administrator email and password.');
+      return;
+    }
+
     setLoading(true);
 
-    const res = await authService.login(email, password);
-    setLoading(false);
+    try {
+      const res = await authService.login(email, password);
+      setLoading(false);
 
-    if (res.success) {
-      navigate('/admin');
-    } else {
-      setError(res.error || 'Invalid credentials');
+      if (res.success) {
+        navigate('/admin', { replace: true });
+      } else {
+        setError(res.error || 'Authentication failed. Please verify your credentials.');
+      }
+    } catch (err) {
+      setLoading(false);
+      setError('An unexpected error occurred during login. Please try again.');
     }
-  };
-
-  const handleFillDemo = () => {
-    setEmail('admin@prismflow.tech');
-    setPassword('admin123');
   };
 
   return (
@@ -54,13 +60,13 @@ export const AdminLoginPage: React.FC = () => {
             <svg viewBox="0 0 40 40" className="w-full h-full">
               <defs>
                 <linearGradient id="adminLoginGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#7CFF6A" />
+                  <stop offset="0%" stopColor="#0077B6" />
                   <stop offset="50%" stopColor="#18B8C4" />
                   <stop offset="100%" stopColor="#0F8F9C" />
                 </linearGradient>
               </defs>
               <polygon points="20,4 36,34 4,34" fill="none" stroke="url(#adminLoginGrad)" strokeWidth="4" strokeLinejoin="round" />
-              <circle cx="20" cy="22" r="3.5" fill="#7CFF6A" />
+              <circle cx="20" cy="22" r="3.5" fill="#0077B6" />
             </svg>
           </div>
 
@@ -68,7 +74,7 @@ export const AdminLoginPage: React.FC = () => {
             Admin Console
           </h1>
           <p className="text-xs text-text-secondary mt-1">
-            Sign in to manage inquiries, portfolio, testimonials, and legal policies.
+            Sign in with your authorized administrator credentials.
           </p>
         </div>
 
@@ -88,6 +94,7 @@ export const AdminLoginPage: React.FC = () => {
               <input
                 type="email"
                 required
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@prismflow.tech"
@@ -105,9 +112,10 @@ export const AdminLoginPage: React.FC = () => {
               <input
                 type="password"
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="••••••••••••"
                 className="w-full pl-10 pr-4 py-3 rounded-xl bg-bg-primary/90 border border-white/10 text-text-primary text-sm focus:outline-none focus:border-cyan-secondary transition-all"
               />
               <Lock size={16} className="absolute left-3.5 top-3.5 text-text-muted" />
@@ -120,7 +128,10 @@ export const AdminLoginPage: React.FC = () => {
             className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-primary to-cyan-secondary text-white font-bold text-sm shadow-cyan-glow hover:opacity-95 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50"
           >
             {loading ? (
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span className="inline-flex items-center gap-2">
+                <Loader2 size={16} className="animate-spin" />
+                <span>Authenticating...</span>
+              </span>
             ) : (
               <>
                 <span>Sign In</span>
@@ -130,16 +141,10 @@ export const AdminLoginPage: React.FC = () => {
           </button>
         </form>
 
-        {/* Demo Shortcut Helper */}
-        <div className="mt-6 pt-6 border-t border-white/[0.08] text-center">
-          <button
-            type="button"
-            onClick={handleFillDemo}
-            className="text-[11px] text-cyan-secondary hover:text-mint-primary inline-flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            <Key size={11} />
-            <span>Use default demo credentials (admin@prismflow.tech / admin123)</span>
-          </button>
+        <div className="mt-6 text-center">
+          <p className="text-[11px] text-text-muted">
+            🔒 Protected by Supabase Row-Level Security &amp; public.is_admin()
+          </p>
         </div>
 
       </div>

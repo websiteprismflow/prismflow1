@@ -7,178 +7,234 @@ import {
   Eye, 
   EyeOff, 
   Star, 
-  ExternalLink,
-  X,
-  AlertTriangle,
-  Layers,
-  Sparkles,
-  Upload,
-  Image as ImageIcon,
-  Film,
-  Link as LinkIcon,
-  CheckCircle2
+  ExternalLink, 
+  X, 
+  AlertTriangle, 
+  Layers, 
+  Upload, 
+  Image as ImageIcon, 
+  Film, 
+  Loader2,
+  RefreshCw,
+  Check
 } from 'lucide-react';
-import { portfolioService } from '../../services/portfolioService';
-import { subscribeToStorage } from '../../services/storage';
-import { PortfolioProject, ProjectCategory } from '../../types';
+import { portfolioService, VALID_PORTFOLIO_CATEGORIES } from '../../services/portfolioService';
+import { PortfolioProject, PortfolioCategory } from '../../types';
 
 export const AdminPortfolioPage: React.FC = () => {
   const [projects, setProjects] = useState<PortfolioProject[]>([]);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  
-  // Create / Edit modal state
+  const [loading, setLoading] = useState(true);
+  const [deleteProject, setDeleteProject] = useState<PortfolioProject | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<PortfolioProject | null>(null);
 
-  // Form fields
+  // Form Fields
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<ProjectCategory>('Websites');
+  const [category, setCategory] = useState<PortfolioCategory>('Website');
   const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [videoUrl, setVideoUrl] = useState('');
-  const [websiteUrl, setWebsiteUrl] = useState('');
-  const [techInput, setTechInput] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('https://');
+  const [techInput, setTechInput] = useState('React, TypeScript, Supabase');
   const [featured, setFeatured] = useState(false);
   const [published, setPublished] = useState(true);
 
-  // Upload mode states
-  const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
-  const [videoMode, setVideoMode] = useState<'upload' | 'url'>('upload');
-  const [imageFileName, setImageFileName] = useState('');
-  const [videoFileName, setVideoFileName] = useState('');
-  const [uploadError, setUploadError] = useState('');
+  // Upload states
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
 
-  const loadProjects = () => {
-    setProjects(portfolioService.getAll(true));
+  const loadProjects = async () => {
+    setLoading(true);
+    const data = await portfolioService.getAllAdmin();
+    setProjects(data);
+    setLoading(false);
   };
 
   useEffect(() => {
     loadProjects();
-    const unsubscribe = subscribeToStorage((key) => {
-      if (key === 'prism_portfolio') {
-        loadProjects();
-      }
-    });
-    return unsubscribe;
   }, []);
 
   const handleOpenAddModal = () => {
     setEditingProject(null);
     setTitle('');
-    setCategory('Websites');
+    setCategory('Website');
     setDescription('');
-    setImageUrl('');
-    setImageFileName('');
+    setPhotoUrls([]);
     setVideoUrl('');
-    setVideoFileName('');
     setWebsiteUrl('https://');
-    setTechInput('React, TypeScript, AI');
+    setTechInput('React, TypeScript, Supabase');
     setFeatured(false);
     setPublished(true);
-    setImageMode('upload');
-    setVideoMode('upload');
-    setUploadError('');
+    setFormError('');
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (proj: PortfolioProject) => {
     setEditingProject(proj);
-    setTitle(proj.title);
-    setCategory(proj.category);
-    setDescription(proj.description);
-    setImageUrl(proj.imageUrl);
-    setImageFileName(proj.imageUrl.startsWith('data:') ? 'Custom uploaded image' : '');
-    setVideoUrl(proj.videoUrl || '');
-    setVideoFileName(proj.videoUrl?.startsWith('data:') ? 'Custom uploaded video' : '');
-    setWebsiteUrl(proj.websiteUrl);
-    setTechInput(proj.technologies.join(', '));
-    setFeatured(proj.featured);
-    setPublished(proj.published);
-    setImageMode(proj.imageUrl.startsWith('data:') ? 'upload' : 'upload');
-    setVideoMode(proj.videoUrl?.startsWith('data:') ? 'upload' : 'upload');
-    setUploadError('');
+    setTitle(proj.project_title || proj.title || '');
+    setCategory((proj.category as PortfolioCategory) || 'Website');
+    setDescription(proj.description || '');
+    setPhotoUrls(proj.project_photo_urls || (proj.imageUrl ? [proj.imageUrl] : []));
+    setVideoUrl(proj.preview_video_url || proj.videoUrl || '');
+    setWebsiteUrl(proj.live_website_url || proj.websiteUrl || '');
+    setTechInput((proj.technologies || []).join(', '));
+    setFeatured(proj.featured_on_homepage || false);
+    setPublished(proj.published_live !== undefined ? proj.published_live : true);
+    setFormError('');
     setIsModalOpen(true);
   };
 
-  const handleImageFileUpload = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setUploadError('Please select a valid image file (PNG, JPG, WebP, SVG)');
-      return;
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImage(true);
+    setFormError('');
+
+    try {
+      const newUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const res = await portfolioService.uploadImage(file);
+        if (res.success && res.url) {
+          newUrls.push(res.url);
+        } else {
+          setFormError(res.error || `Failed to upload image ${file.name}`);
+        }
+      }
+      if (newUrls.length > 0) {
+        setPhotoUrls((prev) => [...prev, ...newUrls]);
+      }
+    } catch (err) {
+      setFormError('Failed to upload image to portfolio-images bucket.');
+    } finally {
+      setUploadingImage(false);
+      if (imageInputRef.current) imageInputRef.current.value = '';
     }
-    setUploadError('');
-    setImageFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImageUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
-  const handleVideoFileUpload = (file: File) => {
-    if (!file.type.startsWith('video/')) {
-      setUploadError('Please select a valid video file (MP4, WebM, MOV)');
-      return;
-    }
-    setUploadError('');
-    setVideoFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setVideoUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+  const handleRemovePhoto = (index: number) => {
+    setPhotoUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSaveProject = async (e: React.FormEvent) => {
+  const handleVideoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingVideo(true);
+    setFormError('');
+
+    try {
+      const res = await portfolioService.uploadVideo(file);
+      if (res.success && res.url) {
+        setVideoUrl(res.url);
+      } else {
+        setFormError(res.error || 'Failed to upload video');
+      }
+    } catch (err) {
+      setFormError('Failed to upload video to portfolio-videos bucket.');
+    } finally {
+      setUploadingVideo(false);
+      if (videoInputRef.current) videoInputRef.current.value = '';
+    }
+  };
+
+  const handleTogglePublish = async (proj: PortfolioProject) => {
+    const current = proj.published_live !== undefined ? proj.published_live : true;
+    await portfolioService.togglePublish(proj.id, current);
+    loadProjects();
+  };
+
+  const handleToggleFeatured = async (proj: PortfolioProject) => {
+    await portfolioService.update(proj.id, {
+      featured_on_homepage: !proj.featured_on_homepage
+    });
+    loadProjects();
+  };
+
+  const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!imageUrl) {
-      setUploadError('Please select or upload a project cover photo.');
+    setFormError('');
+
+    if (!title.trim() || !description.trim()) {
+      setFormError('Please provide a project title and description.');
       return;
     }
 
-    const techArray = techInput.split(',').map((t) => t.trim()).filter(Boolean);
+    // Convert comma-separated string to text[]
+    const techArray = techInput
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
 
-    if (editingProject) {
-      await portfolioService.update(editingProject.id, {
-        title,
-        category,
-        description,
-        imageUrl,
-        videoUrl: videoUrl.trim() || undefined,
-        websiteUrl,
-        technologies: techArray,
-        featured,
-        published
-      });
-    } else {
-      await portfolioService.create({
-        title,
-        category,
-        description,
-        imageUrl,
-        videoUrl: videoUrl.trim() || undefined,
-        websiteUrl,
-        technologies: techArray,
-        featured,
-        published
-      });
+    setSaving(true);
+
+    try {
+      if (editingProject) {
+        const res = await portfolioService.update(editingProject.id, {
+          project_title: title.trim(),
+          category,
+          description: description.trim(),
+          project_photo_urls: photoUrls,
+          preview_video_url: videoUrl.trim() || null,
+          live_website_url: websiteUrl.trim() || null,
+          technologies: techArray,
+          featured_on_homepage: featured,
+          published_live: published
+        });
+
+        if (res.success) {
+          setIsModalOpen(false);
+          loadProjects();
+        } else {
+          setFormError(res.error || 'Failed to update project');
+        }
+      } else {
+        const res = await portfolioService.create({
+          project_title: title.trim(),
+          category,
+          description: description.trim(),
+          project_photo_urls: photoUrls,
+          preview_video_url: videoUrl.trim() || null,
+          live_website_url: websiteUrl.trim() || null,
+          technologies: techArray,
+          featured_on_homepage: featured,
+          published_live: published
+        });
+
+        if (res.success) {
+          setIsModalOpen(false);
+          loadProjects();
+        } else {
+          setFormError(res.error || 'Failed to create project');
+        }
+      }
+    } catch (err) {
+      setFormError('An unexpected error occurred while saving.');
+    } finally {
+      setSaving(false);
     }
-
-    setIsModalOpen(false);
-    loadProjects();
   };
 
-  const handleTogglePublish = async (id: string) => {
-    await portfolioService.togglePublish(id);
-    loadProjects();
-  };
+  const confirmDeleteProject = async () => {
+    if (!deleteProject) return;
+    setDeleting(true);
 
-  const confirmDelete = async () => {
-    if (!deleteId) return;
-    await portfolioService.delete(deleteId);
-    setDeleteId(null);
+    const mediaList: string[] = [];
+    if (deleteProject.project_photo_urls) mediaList.push(...deleteProject.project_photo_urls);
+    if (deleteProject.preview_video_url) mediaList.push(deleteProject.preview_video_url);
+
+    await portfolioService.delete(deleteProject.id, mediaList);
+    setDeleting(false);
+    setDeleteProject(null);
     loadProjects();
   };
 
@@ -192,136 +248,202 @@ export const AdminPortfolioPage: React.FC = () => {
             Portfolio Management
           </h1>
           <p className="text-xs sm:text-sm text-text-secondary mt-1">
-            Publish, edit, and organize selected works displayed on the public website.
+            Curate showcased work, upload images to Supabase Storage, and manage live visibility.
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAddModal}
-          className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-primary to-cyan-secondary text-white text-xs font-bold shadow-cyan-glow flex items-center gap-1.5 hover:opacity-95 transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <Plus size={15} />
-          <span>Add New Project</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={loadProjects}
+            disabled={loading}
+            className="p-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-text-secondary hover:text-text-primary transition-all cursor-pointer"
+            title="Refresh"
+          >
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+          </button>
+
+          <button
+            onClick={handleOpenAddModal}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-primary to-cyan-secondary text-white font-bold text-xs shadow-cyan-glow hover:opacity-95 flex items-center gap-2 cursor-pointer transition-all"
+          >
+            <Plus size={16} />
+            <span>Add New Project</span>
+          </button>
+        </div>
       </div>
 
       {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.map((proj) => (
-          <div
-            key={proj.id}
-            className={`p-5 rounded-3xl glass-panel border flex flex-col justify-between transition-all ${
-              proj.published ? 'border-white/10' : 'border-dashed border-white/20 opacity-70'
-            }`}
+      {loading ? (
+        <div className="py-24 rounded-2xl glass-panel border border-white/10 flex flex-col items-center justify-center gap-3 text-text-secondary">
+          <Loader2 size={28} className="animate-spin text-cyan-secondary" />
+          <span className="text-xs">Loading projects from Supabase...</span>
+        </div>
+      ) : projects.length === 0 ? (
+        <div className="py-20 rounded-2xl glass-panel border border-white/10 text-center flex flex-col items-center justify-center p-6">
+          <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center text-text-muted mb-3">
+            <FolderKanban size={22} />
+          </div>
+          <h3 className="text-base font-bold text-text-primary">No portfolio items</h3>
+          <p className="text-xs text-text-secondary max-w-sm mt-1 mb-6">
+            Add your first project to display it on the public showcase.
+          </p>
+          <button
+            onClick={handleOpenAddModal}
+            className="px-4 py-2 rounded-xl bg-cyan-primary/20 border border-cyan-secondary/40 text-cyan-highlight text-xs font-semibold flex items-center gap-1.5"
           >
-            <div>
-              {/* Preview Image */}
-              <div className="relative w-full h-40 rounded-2xl overflow-hidden bg-bg-secondary mb-4 border border-white/5">
-                <img
-                  src={proj.imageUrl}
-                  alt={proj.title}
-                  className="w-full h-full object-cover"
-                />
-                
-                <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-bg-elevated/90 border border-white/10 text-cyan-highlight">
-                    {proj.category}
-                  </span>
-                  {proj.featured && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-mint-primary/20 text-mint-primary border border-mint-primary/40 flex items-center gap-1">
-                      <Star size={9} fill="currentColor" /> Featured
-                    </span>
-                  )}
+            <Plus size={14} /> Add Project
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {projects.map((proj) => {
+            const mainImage = (proj.project_photo_urls && proj.project_photo_urls[0]) || proj.imageUrl || '';
+            const isPublished = proj.published_live !== undefined ? proj.published_live : true;
+
+            return (
+              <div
+                key={proj.id}
+                className={`rounded-2xl glass-panel border transition-all overflow-hidden flex flex-col justify-between group ${
+                  isPublished ? 'border-white/10' : 'border-amber-500/30 opacity-75'
+                }`}
+              >
+                <div>
+                  {/* Media Preview Header */}
+                  <div className="relative h-44 bg-bg-secondary overflow-hidden">
+                    {mainImage ? (
+                      <img src={mainImage} alt={proj.project_title || proj.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-text-muted bg-white/[0.02]">
+                        <ImageIcon size={24} />
+                      </div>
+                    )}
+
+                    <div className="absolute inset-0 bg-gradient-to-t from-bg-elevated via-transparent to-transparent opacity-80" />
+
+                    <div className="absolute top-3 left-3 flex gap-1.5">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-bg-primary/80 backdrop-blur-md border border-white/15 text-cyan-highlight">
+                        {proj.category}
+                      </span>
+                      {proj.featured_on_homepage && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 backdrop-blur-md border border-amber-500/40 text-amber-300 flex items-center gap-1">
+                          <Star size={10} fill="currentColor" /> Featured
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="absolute top-3 right-3 flex items-center gap-1">
+                      <button
+                        onClick={() => handleTogglePublish(proj)}
+                        className={`p-1.5 rounded-lg backdrop-blur-md transition-colors cursor-pointer ${
+                          isPublished
+                            ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30'
+                            : 'bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30'
+                        }`}
+                        title={isPublished ? 'Published Live (Click to unpublish)' : 'Unpublished (Click to publish)'}
+                      >
+                        {isPublished ? <Eye size={13} /> : <EyeOff size={13} />}
+                      </button>
+                    </div>
+
+                    {proj.project_photo_urls && proj.project_photo_urls.length > 1 && (
+                      <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded-md bg-black/60 text-[10px] text-text-muted backdrop-blur-sm border border-white/10">
+                        {proj.project_photo_urls.length} photos
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Body Info */}
+                  <div className="p-5 space-y-3">
+                    <h3 className="text-base font-bold text-text-primary line-clamp-1">
+                      {proj.project_title || proj.title}
+                    </h3>
+                    <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed">
+                      {proj.description}
+                    </p>
+
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {(proj.technologies || []).slice(0, 4).map((tech) => (
+                        <span key={tech} className="px-2 py-0.5 rounded bg-white/[0.04] text-[10px] text-text-muted">
+                          {tech}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
-                <button
-                  onClick={() => handleTogglePublish(proj.id)}
-                  className={`absolute top-2.5 right-2.5 p-1.5 rounded-full text-xs backdrop-blur-md transition-colors ${
-                    proj.published ? 'bg-mint-primary/20 text-mint-primary border border-mint-primary/40' : 'bg-black/60 text-text-muted'
-                  }`}
-                  title={proj.published ? 'Published (Click to Unpublish)' : 'Unpublished (Click to Publish)'}
-                >
-                  {proj.published ? <Eye size={14} /> : <EyeOff size={14} />}
-                </button>
+                {/* Card Actions Footer */}
+                <div className="p-4 border-t border-white/[0.06] bg-white/[0.01] flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleToggleFeatured(proj)}
+                      className={`text-[11px] flex items-center gap-1 px-2.5 py-1 rounded-lg border transition-colors cursor-pointer ${
+                        proj.featured_on_homepage
+                          ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                          : 'border-white/10 text-text-muted hover:text-text-primary'
+                      }`}
+                    >
+                      <Star size={11} fill={proj.featured_on_homepage ? 'currentColor' : 'none'} />
+                      <span>{proj.featured_on_homepage ? 'Featured' : 'Feature'}</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleOpenEditModal(proj)}
+                      className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-text-secondary hover:text-cyan-highlight transition-colors cursor-pointer"
+                      title="Edit Project"
+                    >
+                      <Edit3 size={14} />
+                    </button>
+                    <button
+                      onClick={() => setDeleteProject(proj)}
+                      className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-red-500/20 text-text-secondary hover:text-red-400 transition-colors cursor-pointer"
+                      title="Delete Project"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+
               </div>
+            );
+          })}
+        </div>
+      )}
 
-              {/* Title & Description */}
-              <h3 className="font-bold text-base text-text-primary mb-1.5">
-                {proj.title}
-              </h3>
-              <p className="text-xs text-text-secondary line-clamp-2 mb-4 leading-relaxed">
-                {proj.description}
-              </p>
-
-              {/* Tech Tags */}
-              <div className="flex flex-wrap gap-1 mb-4">
-                {proj.technologies.slice(0, 3).map((t) => (
-                  <span key={t} className="px-2 py-0.5 rounded text-[10px] bg-white/[0.03] text-text-muted">
-                    {t}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Actions Footer */}
-            <div className="pt-3 border-t border-white/[0.05] flex items-center justify-between">
-              <a
-                href={proj.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[11px] text-cyan-secondary hover:text-mint-primary flex items-center gap-1"
-              >
-                <span>Live Link</span>
-                <ExternalLink size={11} />
-              </a>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => handleOpenEditModal(proj)}
-                  className="p-1.5 rounded-lg bg-white/[0.04] text-text-secondary hover:text-cyan-highlight hover:bg-white/[0.08] transition-colors"
-                  title="Edit Project"
-                >
-                  <Edit3 size={14} />
-                </button>
-                <button
-                  onClick={() => setDeleteId(proj.id)}
-                  className="p-1.5 rounded-lg bg-white/[0.04] text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                  title="Delete Project"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-
-          </div>
-        ))}
-      </div>
-
-      {/* Add / Edit Project Modal */}
+      {/* Create / Edit Project Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div 
             onClick={() => setIsModalOpen(false)}
-            className="fixed inset-0 bg-black/80 backdrop-blur-xl animate-fade-in"
+            className="fixed inset-0 bg-black/80 backdrop-blur-md"
           />
-
-          <div className="relative w-full max-w-2xl rounded-3xl bg-bg-elevated border border-white/15 shadow-2xl p-6 sm:p-8 z-10 animate-scale-up space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <h3 className="text-lg font-bold text-text-primary">
-                {editingProject ? 'Edit Project' : 'Add New Portfolio Project'}
+          <div className="relative w-full max-w-2xl rounded-3xl bg-bg-elevated border border-white/15 p-6 sm:p-8 z-10 shadow-2xl space-y-5 animate-scale-up my-8 max-h-[90vh] overflow-y-auto">
+            
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+              <h3 className="text-xl font-bold text-text-primary">
+                {editingProject ? 'Edit Project' : 'Create New Portfolio Project'}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-full text-text-muted hover:text-text-primary"
+                className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-white/[0.05]"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveProject} className="space-y-4 text-xs">
+            {formError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs">
+                {formError}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitForm} className="space-y-4">
+              
+              {/* Title & Category */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block uppercase tracking-wider font-semibold text-text-secondary mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1.5">
                     Project Title *
                   </label>
                   <input
@@ -329,31 +451,30 @@ export const AdminPortfolioPage: React.FC = () => {
                     required
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Nexus Core"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-bg-primary border border-white/10 text-text-primary text-xs focus:outline-none focus:border-cyan-secondary"
+                    placeholder="e.g. Nexus AI Automation Hub"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-bg-primary border border-white/10 text-xs text-text-primary focus:outline-none focus:border-cyan-secondary"
                   />
                 </div>
 
                 <div>
-                  <label className="block uppercase tracking-wider font-semibold text-text-secondary mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1.5">
                     Category *
                   </label>
                   <select
                     value={category}
-                    onChange={(e) => setCategory(e.target.value as ProjectCategory)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-bg-primary border border-white/10 text-text-primary text-xs focus:outline-none focus:border-cyan-secondary cursor-pointer"
+                    onChange={(e) => setCategory(e.target.value as PortfolioCategory)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-bg-primary border border-white/10 text-xs text-text-primary focus:outline-none focus:border-cyan-secondary cursor-pointer"
                   >
-                    <option value="Websites">Websites</option>
-                    <option value="AI Agents">AI Agents</option>
-                    <option value="SaaS">SaaS</option>
-                    <option value="Automation">Automation</option>
-                    <option value="E-Commerce">E-Commerce</option>
+                    {VALID_PORTFOLIO_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                 </div>
               </div>
 
+              {/* Description */}
               <div>
-                <label className="block uppercase tracking-wider font-semibold text-text-secondary mb-1">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1.5">
                   Description *
                 </label>
                 <textarea
@@ -361,357 +482,223 @@ export const AdminPortfolioPage: React.FC = () => {
                   required
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe the problem, intelligent architecture, and business outcomes..."
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-bg-primary border border-white/10 text-text-primary text-xs focus:outline-none focus:border-cyan-secondary resize-none"
+                  placeholder="Architectural overview and impact summary..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-bg-primary border border-white/10 text-xs text-text-primary focus:outline-none focus:border-cyan-secondary resize-none"
                 />
               </div>
 
-              {/* Error Notice */}
-              {uploadError && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
-                  <AlertTriangle size={14} className="shrink-0" />
-                  <span>{uploadError}</span>
-                </div>
-              )}
-
-              {/* Photo & Video Desktop Uploaders */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Photo Uploads (Storage bucket 'portfolio-images') */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1.5">
+                  Project Photos (Supabase Storage: portfolio-images)
+                </label>
                 
-                {/* 1. Project Photo Upload */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="block uppercase tracking-wider font-semibold text-text-secondary text-[11px]">
-                      Project Photo *
-                    </label>
-                    <div className="flex items-center gap-1 bg-white/[0.04] p-0.5 rounded-lg border border-white/10">
-                      <button
-                        type="button"
-                        onClick={() => setImageMode('upload')}
-                        className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
-                          imageMode === 'upload' ? 'bg-cyan-primary text-white shadow-sm' : 'text-text-muted hover:text-text-primary'
-                        }`}
-                      >
-                        Desktop
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setImageMode('url')}
-                        className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
-                          imageMode === 'url' ? 'bg-cyan-primary text-white shadow-sm' : 'text-text-muted hover:text-text-primary'
-                        }`}
-                      >
-                        URL
-                      </button>
-                    </div>
+                {photoUrls.length > 0 && (
+                  <div className="flex flex-wrap gap-2.5 mb-3">
+                    {photoUrls.map((url, idx) => (
+                      <div key={idx} className="relative w-20 h-16 rounded-xl overflow-hidden border border-white/15 group">
+                        <img src={url} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(idx)}
+                          className="absolute inset-0 bg-black/60 text-red-400 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
+                )}
 
-                  <input
-                    ref={imageInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleImageFileUpload(file);
-                    }}
-                  />
+                <input
+                  type="file"
+                  ref={imageInputRef}
+                  onChange={handleImageFileChange}
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/avif"
+                  multiple
+                  className="hidden"
+                />
 
-                  {imageMode === 'upload' ? (
-                    imageUrl ? (
-                      <div className="relative rounded-2xl overflow-hidden border border-white/15 bg-bg-primary p-2 flex items-center gap-3">
-                        <img 
-                          src={imageUrl} 
-                          alt="Cover Preview" 
-                          className="w-16 h-14 object-cover rounded-xl border border-white/10 shrink-0" 
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-semibold text-text-primary truncate">
-                            {imageFileName || 'Selected Cover Photo'}
-                          </p>
-                          <span className="text-[10px] text-mint-primary flex items-center gap-1 mt-0.5">
-                            <CheckCircle2 size={11} /> Photo Loaded
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => imageInputRef.current?.click()}
-                            className="px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-text-primary text-[10px] font-medium"
-                          >
-                            Change
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setImageUrl('');
-                              setImageFileName('');
-                              if (imageInputRef.current) imageInputRef.current.value = '';
-                            }}
-                            className="p-1 rounded-lg hover:bg-red-500/20 text-text-muted hover:text-red-400"
-                            title="Remove Photo"
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        onClick={() => imageInputRef.current?.click()}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          const file = e.dataTransfer.files?.[0];
-                          if (file) handleImageFileUpload(file);
-                        }}
-                        className="border-2 border-dashed border-white/20 hover:border-cyan-secondary/70 hover:bg-cyan-primary/5 rounded-2xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 min-h-[96px]"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-cyan-primary/10 text-cyan-secondary flex items-center justify-center">
-                          <Upload size={16} />
-                        </div>
-                        <p className="text-[11px] font-semibold text-text-primary">
-                          Click or drag image from desktop
-                        </p>
-                        <p className="text-[10px] text-text-muted">
-                          PNG, JPG, WebP, SVG supported
-                        </p>
-                      </div>
-                    )
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  className="w-full py-3 rounded-xl border border-dashed border-white/20 hover:border-cyan-secondary/50 bg-white/[0.02] hover:bg-white/[0.04] text-xs font-semibold text-text-secondary hover:text-text-primary flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
+                >
+                  {uploadingImage ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin text-cyan-secondary" />
+                      <span>Uploading to portfolio-images bucket...</span>
+                    </>
                   ) : (
-                    <input
-                      type="url"
-                      value={imageUrl}
-                      onChange={(e) => {
-                        setImageUrl(e.target.value);
-                        setImageFileName('');
-                      }}
-                      placeholder="https://images.unsplash.com/..."
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-bg-primary border border-white/10 text-text-primary text-xs focus:outline-none focus:border-cyan-secondary"
-                    />
+                    <>
+                      <Upload size={16} className="text-cyan-secondary" />
+                      <span>Upload Photos to Storage (JPEG, PNG, WebP)</span>
+                    </>
                   )}
-                </div>
-
-                {/* 2. Project Video Upload */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="block uppercase tracking-wider font-semibold text-text-secondary text-[11px]">
-                      Preview Video <span className="text-text-muted font-normal lowercase">(optional)</span>
-                    </label>
-                    <div className="flex items-center gap-1 bg-white/[0.04] p-0.5 rounded-lg border border-white/10">
-                      <button
-                        type="button"
-                        onClick={() => setVideoMode('upload')}
-                        className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
-                          videoMode === 'upload' ? 'bg-mint-primary text-black font-bold shadow-sm' : 'text-text-muted hover:text-text-primary'
-                        }`}
-                      >
-                        Desktop
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setVideoMode('url')}
-                        className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
-                          videoMode === 'url' ? 'bg-mint-primary text-black font-bold shadow-sm' : 'text-text-muted hover:text-text-primary'
-                        }`}
-                      >
-                        URL
-                      </button>
-                    </div>
-                  </div>
-
-                  <input
-                    ref={videoInputRef}
-                    type="file"
-                    accept="video/mp4,video/webm,video/quicktime"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleVideoFileUpload(file);
-                    }}
-                  />
-
-                  {videoMode === 'upload' ? (
-                    videoUrl ? (
-                      <div className="relative rounded-2xl overflow-hidden border border-white/15 bg-bg-primary p-2 flex items-center gap-3">
-                        <div className="w-16 h-14 bg-black rounded-xl overflow-hidden border border-white/10 shrink-0 flex items-center justify-center">
-                          <video 
-                            src={videoUrl} 
-                            className="w-full h-full object-cover" 
-                            muted 
-                            playsInline 
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-semibold text-text-primary truncate">
-                            {videoFileName || 'Selected Video File'}
-                          </p>
-                          <span className="text-[10px] text-mint-primary flex items-center gap-1 mt-0.5">
-                            <CheckCircle2 size={11} /> Video Loaded
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => videoInputRef.current?.click()}
-                            className="px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-text-primary text-[10px] font-medium"
-                          >
-                            Change
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setVideoUrl('');
-                              setVideoFileName('');
-                              if (videoInputRef.current) videoInputRef.current.value = '';
-                            }}
-                            className="p-1 rounded-lg hover:bg-red-500/20 text-text-muted hover:text-red-400"
-                            title="Remove Video"
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        onClick={() => videoInputRef.current?.click()}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          const file = e.dataTransfer.files?.[0];
-                          if (file) handleVideoFileUpload(file);
-                        }}
-                        className="border-2 border-dashed border-white/20 hover:border-mint-primary/70 hover:bg-mint-primary/5 rounded-2xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 min-h-[96px]"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-mint-primary/10 text-mint-primary flex items-center justify-center">
-                          <Film size={16} />
-                        </div>
-                        <p className="text-[11px] font-semibold text-text-primary">
-                          Click or drag video from desktop
-                        </p>
-                        <p className="text-[10px] text-text-muted">
-                          MP4, WebM, MOV supported
-                        </p>
-                      </div>
-                    )
-                  ) : (
-                    <input
-                      type="url"
-                      value={videoUrl}
-                      onChange={(e) => {
-                        setVideoUrl(e.target.value);
-                        setVideoFileName('');
-                      }}
-                      placeholder="https://assets.mixkit.co/..."
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-bg-primary border border-white/10 text-text-primary text-xs focus:outline-none focus:border-cyan-secondary"
-                    />
-                  )}
-                </div>
-
+                </button>
               </div>
 
+              {/* Video Upload (Storage bucket 'portfolio-videos') */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1.5">
+                  Preview Video (Supabase Storage: portfolio-videos)
+                </label>
+                
+                {videoUrl && (
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-xs mb-2">
+                    <span className="truncate text-cyan-highlight mr-2">{videoUrl}</span>
+                    <button
+                      type="button"
+                      onClick={() => setVideoUrl('')}
+                      className="p-1 text-text-muted hover:text-red-400 cursor-pointer"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
+                <input
+                  type="file"
+                  ref={videoInputRef}
+                  onChange={handleVideoFileChange}
+                  accept="video/mp4,video/webm,video/quicktime"
+                  className="hidden"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => videoInputRef.current?.click()}
+                  disabled={uploadingVideo}
+                  className="w-full py-2.5 rounded-xl border border-dashed border-white/15 bg-white/[0.01] hover:bg-white/[0.03] text-xs text-text-secondary flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
+                >
+                  {uploadingVideo ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin text-cyan-secondary" />
+                      <span>Uploading video...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Film size={15} className="text-mint-primary" />
+                      <span>Upload Video Preview (MP4, WebM)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Live URL & Technologies */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block uppercase tracking-wider font-semibold text-text-secondary mb-1">
-                    Website Live URL *
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1.5">
+                    Live Website URL
                   </label>
                   <input
                     type="url"
-                    required
                     value={websiteUrl}
                     onChange={(e) => setWebsiteUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-bg-primary border border-white/10 text-text-primary text-xs focus:outline-none focus:border-cyan-secondary"
+                    placeholder="https://client-demo.com"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-bg-primary border border-white/10 text-xs text-text-primary focus:outline-none focus:border-cyan-secondary"
                   />
                 </div>
 
                 <div>
-                  <label className="block uppercase tracking-wider font-semibold text-text-secondary mb-1">
-                    Technologies (Comma-separated)
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1.5">
+                    Technologies (comma-separated)
                   </label>
                   <input
                     type="text"
                     value={techInput}
                     onChange={(e) => setTechInput(e.target.value)}
-                    placeholder="React, TypeScript, LangGraph, Python"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-bg-primary border border-white/10 text-text-primary text-xs focus:outline-none focus:border-cyan-secondary"
+                    placeholder="Next.js, Python, Supabase"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-bg-primary border border-white/10 text-xs text-text-primary focus:outline-none focus:border-cyan-secondary"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center gap-6 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
+              {/* Toggles */}
+              <div className="pt-2 flex items-center gap-6">
+                <label className="flex items-center gap-2 text-xs font-medium text-text-primary cursor-pointer">
                   <input
                     type="checkbox"
                     checked={featured}
                     onChange={(e) => setFeatured(e.target.checked)}
-                    className="rounded bg-bg-primary border-white/20 text-cyan-secondary focus:ring-0"
+                    className="rounded border-white/20 text-cyan-primary focus:ring-0 cursor-pointer"
                   />
-                  <span className="text-text-secondary font-medium">Feature on Homepage</span>
+                  <span>Featured on Homepage</span>
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-2 text-xs font-medium text-text-primary cursor-pointer">
                   <input
                     type="checkbox"
                     checked={published}
                     onChange={(e) => setPublished(e.target.checked)}
-                    className="rounded bg-bg-primary border-white/20 text-cyan-secondary focus:ring-0"
+                    className="rounded border-white/20 text-cyan-primary focus:ring-0 cursor-pointer"
                   />
-                  <span className="text-text-secondary font-medium">Published Live</span>
+                  <span>Published Live</span>
                 </label>
               </div>
 
-              <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-3">
+              {/* Submit Buttons */}
+              <div className="pt-4 border-t border-white/10 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-white/[0.04] text-text-secondary hover:text-text-primary"
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] text-xs font-semibold text-text-secondary hover:text-text-primary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-primary to-cyan-secondary text-white font-bold shadow-cyan-glow hover:opacity-95"
+                  disabled={saving || uploadingImage || uploadingVideo}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-primary to-cyan-secondary text-white font-bold text-xs shadow-cyan-glow hover:opacity-95 flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  {editingProject ? 'Save Changes' : 'Publish Project'}
+                  {saving ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Saving to Supabase...</span>
+                    </>
+                  ) : (
+                    <span>{editingProject ? 'Update Project' : 'Publish Project'}</span>
+                  )}
                 </button>
               </div>
+
             </form>
 
           </div>
         </div>
       )}
 
-      {/* Delete Confirmation */}
-      {deleteId && (
+      {/* Delete Confirmation Modal */}
+      {deleteProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div 
-            onClick={() => setDeleteId(null)}
-            className="fixed inset-0 bg-black/80 backdrop-blur-md animate-fade-in"
+            onClick={() => setDeleteProject(null)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md"
           />
-
-          <div className="relative w-full max-w-sm rounded-3xl bg-bg-elevated border border-red-500/30 p-6 z-10 animate-scale-up space-y-4 shadow-2xl text-center">
-            <div className="w-12 h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto">
+          <div className="relative w-full max-w-sm rounded-3xl bg-bg-elevated border border-red-500/30 p-6 z-10 shadow-2xl text-center space-y-4 animate-scale-up">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 mx-auto">
               <AlertTriangle size={24} />
             </div>
-
-            <h3 className="text-lg font-bold text-text-primary">
-              Delete Project
-            </h3>
-            <p className="text-xs text-text-secondary">
-              Are you sure you want to permanently remove this portfolio project?
-            </p>
-
-            <div className="flex items-center justify-center gap-3 pt-2">
+            <div>
+              <h3 className="text-lg font-bold text-text-primary">Delete Project</h3>
+              <p className="text-xs text-text-secondary mt-1">
+                Are you sure you want to remove <span className="text-white font-semibold">{deleteProject.project_title || deleteProject.title}</span>? This will also clean up associated media files in storage.
+              </p>
+            </div>
+            <div className="flex gap-3 pt-2">
               <button
-                onClick={() => setDeleteId(null)}
-                className="px-4 py-2 rounded-xl bg-white/[0.04] text-xs text-text-secondary hover:text-text-primary"
+                onClick={() => setDeleteProject(null)}
+                className="flex-1 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-xs font-semibold text-text-secondary hover:text-text-primary"
               >
                 Cancel
               </button>
               <button
-                onClick={confirmDelete}
-                className="px-4 py-2 rounded-xl bg-red-500/80 hover:bg-red-500 text-xs font-bold text-white shadow-lg"
+                onClick={confirmDeleteProject}
+                disabled={deleting}
+                className="flex-1 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-xs font-semibold text-red-300 hover:bg-red-500/30 flex items-center justify-center gap-1"
               >
-                Delete
+                {deleting ? <Loader2 size={14} className="animate-spin" /> : 'Delete'}
               </button>
             </div>
           </div>

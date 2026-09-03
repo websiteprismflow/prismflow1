@@ -1,24 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, Clock, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, FileText, Clock, Loader2 } from 'lucide-react';
 import { legalService } from '../services/legalService';
-import { subscribeToStorage } from '../services/storage';
-import { LegalDocument } from '../types';
+import { LegalClause } from '../types';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 
 export const TermsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [doc, setDoc] = useState<LegalDocument>(legalService.getDocument('terms'));
+  const [clauses, setClauses] = useState<LegalClause[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    const unsubscribe = subscribeToStorage((key) => {
-      if (key === 'prism_legal') {
-        setDoc(legalService.getDocument('terms'));
-      }
-    });
-    return unsubscribe;
+    const loadClauses = async () => {
+      setLoading(true);
+      const data = await legalService.getPublishedClauses('Terms & Conditions');
+      setClauses(data);
+      setLoading(false);
+    };
+    loadClauses();
   }, []);
 
   return (
@@ -44,28 +45,39 @@ export const TermsPage: React.FC = () => {
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-text-primary mb-3">
-            {doc.title}
+            Terms &amp; Conditions
           </h1>
 
           <div className="flex items-center gap-2 text-xs sm:text-sm text-text-muted">
             <Clock size={14} className="text-mint-primary" />
-            <span>Last Updated: {doc.lastUpdated}</span>
+            <span>Enterprise Engagement &amp; Delivery Framework</span>
           </div>
         </div>
 
         {/* Document Body Sections */}
-        <div className="space-y-8 p-8 sm:p-10 rounded-3xl glass-panel border border-white/10">
-          {doc.sections.map((section, idx) => (
-            <section key={idx} className="space-y-3 pb-6 border-b border-white/[0.05] last:border-b-0 last:pb-0">
-              <h2 className="text-lg sm:text-xl font-bold text-text-primary tracking-tight">
-                {section.heading}
-              </h2>
-              <p className="text-sm sm:text-base text-text-secondary leading-relaxed font-light">
-                {section.body}
-              </p>
-            </section>
-          ))}
-        </div>
+        {loading ? (
+          <div className="py-24 rounded-3xl glass-panel border border-white/10 flex flex-col items-center justify-center gap-3 text-text-secondary">
+            <Loader2 size={28} className="animate-spin text-cyan-secondary" />
+            <span className="text-xs">Loading terms and conditions...</span>
+          </div>
+        ) : clauses.length === 0 ? (
+          <div className="p-10 rounded-3xl glass-panel border border-white/10 text-center">
+            <p className="text-sm text-text-secondary">No terms &amp; conditions currently published.</p>
+          </div>
+        ) : (
+          <div className="space-y-8 p-8 sm:p-10 rounded-3xl glass-panel border border-white/10">
+            {clauses.map((clause) => (
+              <section key={clause.id} className="space-y-3 pb-6 border-b border-white/[0.05] last:border-b-0 last:pb-0">
+                <h2 className="text-lg sm:text-xl font-bold text-text-primary tracking-tight">
+                  {clause.clause_heading}
+                </h2>
+                <div className="text-sm sm:text-base text-text-secondary leading-relaxed font-light whitespace-pre-line">
+                  {clause.clause_content}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
 
       </main>
 

@@ -1,61 +1,271 @@
-import { Inquiry, InquiryStatus } from '../types';
-import { INITIAL_INQUIRIES } from '../data/initialData';
-import { getStoredItem, setStoredItem } from './storage';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { Inquiry, InquiryStatus, BusinessType, WhatYouNeed } from '../types';
 
-const INQUIRIES_KEY = 'prism_inquiries_v2';
+export const VALID_BUSINESS_TYPES: BusinessType[] = [
+  'SaaS',
+  'E-commerce',
+  'Agency',
+  'Real Estate',
+  'Restaurant',
+  'Others'
+];
+
+export const VALID_WHAT_YOU_NEED: WhatYouNeed[] = [
+  'Website',
+  'AI Agent',
+  'AI Automation',
+  'SaaS App',
+  'E-commerce',
+  'Custom System'
+];
+
+export const VALID_STATUSES: InquiryStatus[] = [
+  'Pending',
+  'Accepted',
+  'Completed',
+  'Rejected'
+];
+
+export interface InquiryPaginationParams {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+  sortBy?: 'newest' | 'oldest';
+  searchTerm?: string;
+}
+
+export interface InquiryPaginationResult {
+  data: Inquiry[];
+  count: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
 
 export const inquiryService = {
-  getAll: (): Inquiry[] => {
-    return getStoredItem<Inquiry[]>(INQUIRIES_KEY, INITIAL_INQUIRIES);
+  /**
+   * Submit a new public inquiry.
+   * Enforces status = 'Pending' and validates input fields.
+   */
+  create: async (data: {
+    name: string;
+    business_type: string;
+    email: string;
+    contact_number: string;
+    what_you_need: string;
+    additional_requirement?: string;
+  }): Promise<{ success: boolean; error?: string }> => {
+    // 1. Validation
+    const name = data.name?.trim();
+    const email = data.email?.trim().toLowerCase();
+    const contact = data.contact_number?.trim();
+    const businessType = data.business_type?.trim();
+    const whatYouNeed = data.what_you_need?.trim();
+    const additional = data.additional_requirement?.trim() || null;
+
+    if (!name || !email || !contact || !businessType || !whatYouNeed) {
+      return { success: false, error: 'Please fill out all required fields.' };
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return { success: false, error: 'Please provide a valid email address.' };
+    }
+
+    if (contact.length < 6) {
+      return { success: false, error: 'Please provide a valid contact number.' };
+    }
+
+    if (!isSupabaseConfigured()) {
+      console.warn('PrismFlow inquiryService: Supabase is not configured yet in .env');
+      return { success: false, error: 'Database service is currently unreachable. Please try again shortly.' };
+    }
+
+    try {
+      // Respect RLS: insert into public.inquiries with status explicitly forced to Pending
+      const { error } = await supabase
+        .from('inquiries')
+        .insert({
+          name,
+          business_type: businessType,
+          email,
+          contact_number: contact,
+          what_you_need: whatYouNeed,
+          additional_requirement: additional,
+          status: 'Pending'
+        });
+
+      if (error) {
+        console.error('PrismFlow inquiryService insert error:', error.message);
+        return { success: false, error: 'Unable to submit your inquiry at this moment. Please try again.' };
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error('PrismFlow inquiryService exception:', err);
+      return { success: false, error: 'Something went wrong. Please try again.' };
+    }
   },
 
-  getById: (id: string): Inquiry | undefined => {
-    const inquiries = inquiryService.getAll();
-    return inquiries.find((i) => i.id === id);
+  /**
+   * Get paginated inquiries for Admin Dashboard.
+   * Loads ~25 records per page, filtered and sorted server-side.
+   */
+  getPaginated: async (params: InquiryPaginationParams = {}): Promise<InquiryPaginationResult> => {
+    const page = Math.max(1, params.page || 1);
+    const pageSize = params.pageSize || 25;
+    const status = params.status || 'all';
+    const sortBy = params.sortBy || 'newest';
+    const searchTerm = params.searchTerm?.trim().toLowerCase() || '';
+
+    if (!isSupabaseConfigured()) {
+      return { data: [], count: 0, page: 1, pageSize, totalPages: 0 };
+    }
+
+    try {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      let query = supabase
+        .from('inquiries')
+        .select('*', { count: 'exact' });
+
+      // Status filter
+      if (status !== 'all') {
+        query = query.eq('status', status as any);
+      }
+
+      // Search filter if provided
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,what_you_need.ilike.%${searchTerm}%,business_type.ilike.%${searchTerm}%`);
+      }
+
+      // Sorting
+      query = query.order('created_at', { ascending: sortBy === 'oldest' });
+
+      // Range for pagination
+      query = query.range(from, to);
+
+      const { data, count, error } = await query;
+
+      if (error) {
+        console.error('PrismFlow inquiryService getPaginated error:', error.message);
+        return { data: [], count: 0, page, pageSize, totalPages: 0 };
+      }
+
+      const totalCount = count || 0;
+      const totalPages = Math.ceil(totalCount / pageSize);
+
+      const mapped: Inquiry[] = (data || []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        business_type: row.business_type,
+        email: row.email,
+        contact_number: row.contact_number,
+        what_you_need: row.what_you_need,
+        additional_requirement: row.additional_requirement,
+        status: row.status,
+        created_at: row.created_at,
+        // UI helper properties
+        businessType: row.business_type,
+        contact: row.contact_number,
+        requirement: row.what_you_need,
+        additionalNotes: row.additional_requirement || '',
+        createdAt: row.created_at
+      }));
+
+      return {
+        data: mapped,
+        count: totalCount,
+        page,
+        pageSize,
+        totalPages
+      };
+    } catch (err) {
+      console.error('PrismFlow inquiryService getPaginated exception:', err);
+      return { data: [], count: 0, page, pageSize, totalPages: 0 };
+    }
   },
 
-  create: async (data: Omit<Inquiry, 'id' | 'createdAt' | 'status'>): Promise<Inquiry> => {
-    const list = inquiryService.getAll();
-    const newInquiry: Inquiry = {
-      ...data,
-      id: `inq-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      status: 'pending'
-    };
-    const updated = [newInquiry, ...list];
-    setStoredItem(INQUIRIES_KEY, updated);
-    return newInquiry;
+  /**
+   * Update inquiry status in Supabase
+   */
+  updateStatus: async (id: string, status: InquiryStatus): Promise<{ success: boolean; error?: string }> => {
+    if (!isSupabaseConfigured()) {
+      return { success: false, error: 'Database is not configured' };
+    }
+
+    try {
+      const { error } = await supabase
+        .from('inquiries')
+        .update({ status })
+        .eq('id', id);
+
+      if (error) {
+        console.error('PrismFlow inquiryService updateStatus error:', error.message);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error('PrismFlow inquiryService updateStatus exception:', err);
+      return { success: false, error: 'Failed to update status' };
+    }
   },
 
-  updateStatus: async (id: string, status: InquiryStatus, adminNotes?: string): Promise<Inquiry | null> => {
-    const list = inquiryService.getAll();
-    const index = list.findIndex((i) => i.id === id);
-    if (index === -1) return null;
+  /**
+   * Delete inquiry from Supabase
+   */
+  delete: async (id: string): Promise<{ success: boolean; error?: string }> => {
+    if (!isSupabaseConfigured()) {
+      return { success: false, error: 'Database is not configured' };
+    }
 
-    const updatedItem: Inquiry = {
-      ...list[index],
-      status,
-      adminNotes: adminNotes !== undefined ? adminNotes : list[index].adminNotes
-    };
-    list[index] = updatedItem;
-    setStoredItem(INQUIRIES_KEY, [...list]);
-    return updatedItem;
+    try {
+      const { error } = await supabase
+        .from('inquiries')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('PrismFlow inquiryService delete error:', error.message);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error('PrismFlow inquiryService delete exception:', err);
+      return { success: false, error: 'Failed to delete inquiry' };
+    }
   },
 
-  updateNotes: async (id: string, adminNotes: string): Promise<Inquiry | null> => {
-    const list = inquiryService.getAll();
-    const index = list.findIndex((i) => i.id === id);
-    if (index === -1) return null;
+  /**
+   * Get counts for overview metrics
+   */
+  getMetrics: async (): Promise<{ total: number; pending: number; accepted: number; completed: number; rejected: number }> => {
+    if (!isSupabaseConfigured()) {
+      return { total: 0, pending: 0, accepted: 0, completed: 0, rejected: 0 };
+    }
 
-    list[index] = { ...list[index], adminNotes };
-    setStoredItem(INQUIRIES_KEY, [...list]);
-    return list[index];
-  },
+    try {
+      const [totalRes, pendingRes, acceptedRes, completedRes, rejectedRes] = await Promise.all([
+        supabase.from('inquiries').select('*', { count: 'exact', head: true }),
+        supabase.from('inquiries').select('*', { count: 'exact', head: true }).eq('status', 'Pending'),
+        supabase.from('inquiries').select('*', { count: 'exact', head: true }).eq('status', 'Accepted'),
+        supabase.from('inquiries').select('*', { count: 'exact', head: true }).eq('status', 'Completed'),
+        supabase.from('inquiries').select('*', { count: 'exact', head: true }).eq('status', 'Rejected'),
+      ]);
 
-  delete: async (id: string): Promise<boolean> => {
-    const list = inquiryService.getAll();
-    const filtered = list.filter((i) => i.id !== id);
-    setStoredItem(INQUIRIES_KEY, filtered);
-    return true;
+      return {
+        total: totalRes.count || 0,
+        pending: pendingRes.count || 0,
+        accepted: acceptedRes.count || 0,
+        completed: completedRes.count || 0,
+        rejected: rejectedRes.count || 0,
+      };
+    } catch (err) {
+      console.error('PrismFlow inquiryService getMetrics exception:', err);
+      return { total: 0, pending: 0, accepted: 0, completed: 0, rejected: 0 };
+    }
   }
 };

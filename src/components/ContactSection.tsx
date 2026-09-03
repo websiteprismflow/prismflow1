@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, CheckCircle, Sparkles, Send, Building2, Mail, Phone, HelpCircle } from 'lucide-react';
-import { inquiryService } from '../services/inquiryService';
+import { ArrowRight, CheckCircle, Loader2 } from 'lucide-react';
+import { inquiryService, VALID_BUSINESS_TYPES, VALID_WHAT_YOU_NEED } from '../services/inquiryService';
 
 interface ContactSectionProps {
   initialRequirement?: string;
@@ -11,7 +11,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
   const [businessType, setBusinessType] = useState('SaaS');
   const [email, setEmail] = useState('');
   const [contact, setContact] = useState('');
-  const [requirement, setRequirement] = useState('AI Agent');
+  const [whatYouNeed, setWhatYouNeed] = useState('AI Agent');
   const [additionalNotes, setAdditionalNotes] = useState('');
   
   const [submitting, setSubmitting] = useState(false);
@@ -20,43 +20,64 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
 
   useEffect(() => {
     if (initialRequirement) {
-      if (initialRequirement.includes('Website')) setRequirement('Website');
-      else if (initialRequirement.includes('Agent')) setRequirement('AI Agent');
-      else if (initialRequirement.includes('Agentic')) setRequirement('Custom System');
-      else if (initialRequirement.includes('SaaS')) setRequirement('SaaS App');
-      else if (initialRequirement.includes('Commerce') || initialRequirement.includes('Automation')) setRequirement('AI Automation');
+      if (initialRequirement.includes('Website')) setWhatYouNeed('Website');
+      else if (initialRequirement.includes('Agent')) setWhatYouNeed('AI Agent');
+      else if (initialRequirement.includes('Agentic')) setWhatYouNeed('Custom System');
+      else if (initialRequirement.includes('SaaS')) setWhatYouNeed('SaaS App');
+      else if (initialRequirement.includes('Commerce')) setWhatYouNeed('E-commerce');
+      else if (initialRequirement.includes('Automation')) setWhatYouNeed('AI Automation');
     }
   }, [initialRequirement]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return; // Prevent double submit
     setErrorMessage('');
 
-    if (!name.trim() || !email.trim() || !contact.trim()) {
+    const cleanName = name.trim();
+    const cleanEmail = email.trim();
+    const cleanContact = contact.trim();
+
+    if (!cleanName || !cleanEmail || !cleanContact) {
       setErrorMessage('Please fill in your name, email, and contact number.');
+      return;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(cleanEmail)) {
+      setErrorMessage('Please enter a valid email address.');
+      return;
+    }
+
+    if (cleanContact.length < 6) {
+      setErrorMessage('Please enter a valid contact number.');
       return;
     }
 
     setSubmitting(true);
 
     try {
-      await inquiryService.create({
-        name: name.trim(),
-        businessType,
-        email: email.trim(),
-        contact: contact.trim(),
-        requirement,
-        additionalNotes: additionalNotes.trim(),
+      const res = await inquiryService.create({
+        name: cleanName,
+        business_type: businessType,
+        email: cleanEmail,
+        contact_number: cleanContact,
+        what_you_need: whatYouNeed,
+        additional_requirement: additionalNotes.trim(),
       });
 
       setSubmitting(false);
-      setSubmitted(true);
-      
-      // Reset form fields
-      setName('');
-      setEmail('');
-      setContact('');
-      setAdditionalNotes('');
+
+      if (res.success) {
+        setSubmitted(true);
+        // Reset form fields
+        setName('');
+        setEmail('');
+        setContact('');
+        setAdditionalNotes('');
+      } else {
+        setErrorMessage(res.error || 'Something went wrong. Please try again.');
+      }
     } catch (err) {
       setSubmitting(false);
       setErrorMessage('Something went wrong. Please try again.');
@@ -108,7 +129,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
 
               <button
                 onClick={() => setSubmitted(false)}
-                className="px-6 py-2.5 rounded-full bg-white/[0.06] border border-white/15 text-text-primary hover:bg-white/[0.1] text-xs font-semibold transition-all"
+                className="px-6 py-2.5 rounded-full bg-white/[0.06] border border-white/15 text-text-primary hover:bg-white/[0.1] text-xs font-semibold transition-all cursor-pointer"
               >
                 Submit Another Request
               </button>
@@ -150,12 +171,11 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
                       onChange={(e) => setBusinessType(e.target.value)}
                       className="w-full px-4 py-3.5 rounded-xl bg-bg-primary/90 border border-white/10 text-text-primary text-sm focus:outline-none focus:border-cyan-secondary focus:ring-1 focus:ring-cyan-secondary/50 transition-all appearance-none cursor-pointer"
                     >
-                      <option value="SaaS" className="bg-bg-elevated text-text-primary">SaaS</option>
-                      <option value="E-Commerce" className="bg-bg-elevated text-text-primary">E-Commerce</option>
-                      <option value="Agency" className="bg-bg-elevated text-text-primary">Agency</option>
-                      <option value="Real Estate" className="bg-bg-elevated text-text-primary">Real Estate</option>
-                      <option value="Restaurant" className="bg-bg-elevated text-text-primary">Restaurant</option>
-                      <option value="Other" className="bg-bg-elevated text-text-primary">Other</option>
+                      {VALID_BUSINESS_TYPES.map((bt) => (
+                        <option key={bt} value={bt} className="bg-bg-elevated text-text-primary">
+                          {bt}
+                        </option>
+                      ))}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-text-muted">
                       ▼
@@ -202,16 +222,15 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
                 </label>
                 <div className="relative">
                   <select
-                    value={requirement}
-                    onChange={(e) => setRequirement(e.target.value)}
+                    value={whatYouNeed}
+                    onChange={(e) => setWhatYouNeed(e.target.value)}
                     className="w-full px-4 py-3.5 rounded-xl bg-bg-primary/90 border border-white/10 text-text-primary text-sm focus:outline-none focus:border-cyan-secondary focus:ring-1 focus:ring-cyan-secondary/50 transition-all appearance-none cursor-pointer"
                   >
-                    <option value="Website" className="bg-bg-elevated text-text-primary">Website</option>
-                    <option value="AI Agent" className="bg-bg-elevated text-text-primary">AI Agent</option>
-                    <option value="AI Automation" className="bg-bg-elevated text-text-primary">AI Automation</option>
-                    <option value="SaaS App" className="bg-bg-elevated text-text-primary">SaaS App</option>
-                    <option value="E-Commerce" className="bg-bg-elevated text-text-primary">E-Commerce</option>
-                    <option value="Custom System" className="bg-bg-elevated text-text-primary">Custom System</option>
+                    {VALID_WHAT_YOU_NEED.map((wyn) => (
+                      <option key={wyn} value={wyn} className="bg-bg-elevated text-text-primary">
+                        {wyn}
+                      </option>
+                    ))}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-text-muted">
                     ▼
@@ -242,8 +261,8 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
                 >
                   {submitting ? (
                     <span className="inline-flex items-center gap-2">
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Sending Request...
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Submitting Inquiry...</span>
                     </span>
                   ) : (
                     <>

@@ -90,13 +90,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigateToSection }) => {
               <svg viewBox="0 0 40 40" className="w-full h-full">
                 <defs>
                   <linearGradient id="logoGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#7CFF6A" />
+                    <stop offset="0%" stopColor="#0077B6" />
                     <stop offset="50%" stopColor="#18B8C4" />
                     <stop offset="100%" stopColor="#0F8F9C" />
                   </linearGradient>
                 </defs>
                 <polygon points="20,4 36,34 4,34" fill="none" stroke="url(#logoGrad)" strokeWidth="4" strokeLinejoin="round" />
-                <circle cx="20" cy="22" r="3.5" fill="#7CFF6A" />
+                <circle cx="20" cy="22" r="3.5" fill="#0077B6" />
               </svg>
             </div>
 

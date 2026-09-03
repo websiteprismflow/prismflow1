@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Inbox, 
   Trash2, 
@@ -8,77 +8,125 @@ import {
   XCircle, 
   CheckSquare, 
   Search, 
-  Filter,
-  X,
-  Phone,
-  Mail,
-  Building,
-  Calendar,
-  AlertTriangle
+  Filter, 
+  X, 
+  Phone, 
+  Mail, 
+  Building, 
+  Calendar, 
+  AlertTriangle,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
-import { inquiryService } from '../../services/inquiryService';
-import { subscribeToStorage } from '../../services/storage';
+import { inquiryService, InquiryPaginationResult } from '../../services/inquiryService';
 import { Inquiry, InquiryStatus } from '../../types';
 
 export const AdminInquiriesPage: React.FC = () => {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize] = useState<number>(25);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   
+  const [loading, setLoading] = useState<boolean>(true);
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
+
   // Modals state
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [editNotes, setEditNotes] = useState('');
+  const [deleting, setDeleting] = useState<boolean>(false);
 
-  const loadInquiries = () => {
-    setInquiries(inquiryService.getAll());
-  };
+  const loadInquiries = useCallback(async () => {
+    setLoading(true);
+    const res: InquiryPaginationResult = await inquiryService.getPaginated({
+      page: currentPage,
+      pageSize,
+      status: statusFilter,
+      sortBy,
+      searchTerm
+    });
+    setInquiries(res.data);
+    setTotalCount(res.count);
+    setTotalPages(Math.max(1, res.totalPages));
+    setLoading(false);
+  }, [currentPage, pageSize, statusFilter, sortBy, searchTerm]);
 
   useEffect(() => {
     loadInquiries();
-    const unsubscribe = subscribeToStorage((key) => {
-      if (key === 'prism_inquiries') {
-        loadInquiries();
-      }
-    });
-    return unsubscribe;
-  }, []);
+  }, [loadInquiries]);
 
-  const handleStatusChange = async (id: string, newStatus: InquiryStatus) => {
-    await inquiryService.updateStatus(id, newStatus);
-    loadInquiries();
-    if (selectedInquiry && selectedInquiry.id === id) {
-      setSelectedInquiry({ ...selectedInquiry, status: newStatus });
-    }
+  const handleStatusFilterChange = (status: string) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
   };
 
-  const handleSaveNotes = async () => {
-    if (!selectedInquiry) return;
-    await inquiryService.updateNotes(selectedInquiry.id, editNotes);
-    setSelectedInquiry({ ...selectedInquiry, adminNotes: editNotes });
-    loadInquiries();
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusChange = async (id: string, newStatus: InquiryStatus) => {
+    setStatusUpdatingId(id);
+    const res = await inquiryService.updateStatus(id, newStatus);
+    setStatusUpdatingId(null);
+    if (res.success) {
+      if (selectedInquiry && selectedInquiry.id === id) {
+        setSelectedInquiry({ ...selectedInquiry, status: newStatus });
+      }
+      loadInquiries();
+    }
   };
 
   const confirmDelete = async () => {
     if (!deleteId) return;
-    await inquiryService.delete(deleteId);
-    setDeleteId(null);
-    if (selectedInquiry && selectedInquiry.id === deleteId) {
-      setSelectedInquiry(null);
+    setDeleting(true);
+    const res = await inquiryService.delete(deleteId);
+    setDeleting(false);
+    if (res.success) {
+      if (selectedInquiry && selectedInquiry.id === deleteId) {
+        setSelectedInquiry(null);
+      }
+      setDeleteId(null);
+      loadInquiries();
     }
-    loadInquiries();
   };
 
-  const filteredInquiries = inquiries.filter((inq) => {
-    const matchesSearch = 
-      inq.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inq.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inq.requirement.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inq.businessType.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = statusFilter === 'all' || inq.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const getStatusBadge = (status: InquiryStatus | string) => {
+    switch (status) {
+      case 'Accepted':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+            <CheckCircle2 size={12} /> Accepted
+          </span>
+        );
+      case 'Completed':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-cyan-primary/20 text-cyan-highlight border border-cyan-secondary/40">
+            <CheckSquare size={12} /> Completed
+          </span>
+        );
+      case 'Rejected':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-500/15 text-red-300 border border-red-500/30">
+            <XCircle size={12} /> Rejected
+          </span>
+        );
+      case 'Pending':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+            <Clock size={12} /> Pending
+          </span>
+        );
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -90,338 +138,325 @@ export const AdminInquiriesPage: React.FC = () => {
             Inquiries & Project Briefs
           </h1>
           <p className="text-xs sm:text-sm text-text-secondary mt-1">
-            Review incoming project proposals and qualify client leads.
+            Review incoming project proposals and qualify client leads directly from Supabase.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-cyan-primary/20 text-cyan-highlight border border-cyan-secondary/40">
-            {inquiries.length} Total Leads
+            {totalCount} Total Inquiries
           </span>
-        </div>
-      </div>
-
-      {/* Filters & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center gap-3">
-        <div className="relative w-full sm:flex-1">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by name, email, business, or requirement..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-bg-secondary border border-white/10 text-text-primary text-xs sm:text-sm focus:outline-none focus:border-cyan-secondary transition-all"
-          />
-          <Search size={15} className="absolute left-3 top-3 text-text-muted" />
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl bg-bg-secondary border border-white/10 text-xs sm:text-sm text-text-primary focus:outline-none focus:border-cyan-secondary cursor-pointer"
+          <button
+            onClick={loadInquiries}
+            disabled={loading}
+            className="p-2 rounded-xl bg-white/[0.04] border border-white/10 text-text-secondary hover:text-text-primary hover:bg-white/[0.08] transition-all cursor-pointer"
+            title="Refresh"
           >
-            <option value="all">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="accepted">Accepted</option>
-            <option value="completed">Completed</option>
-            <option value="rejected">Rejected</option>
-          </select>
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+          </button>
         </div>
       </div>
 
-      {/* Responsive Inquiries List: Desktop Table + Mobile Cards */}
-      
-      {/* Desktop Table View */}
-      <div className="hidden lg:block overflow-hidden rounded-3xl glass-panel border border-white/10">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-white/[0.03] border-b border-white/10 text-text-muted uppercase font-semibold">
-            <tr>
-              <th className="py-3.5 px-4">Client</th>
-              <th className="py-3.5 px-4">Business</th>
-              <th className="py-3.5 px-4">Requirement</th>
-              <th className="py-3.5 px-4">Contact Details</th>
-              <th className="py-3.5 px-4">Date</th>
-              <th className="py-3.5 px-4">Status</th>
-              <th className="py-3.5 px-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/[0.05]">
-            {filteredInquiries.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="py-8 text-center text-text-muted">
-                  No inquiries found matching your filters.
-                </td>
-              </tr>
-            ) : (
-              filteredInquiries.map((inq) => (
-                <tr key={inq.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="py-3.5 px-4 font-bold text-text-primary">
-                    {inq.name}
-                  </td>
-                  <td className="py-3.5 px-4 text-text-secondary">
-                    <span className="px-2 py-0.5 rounded bg-white/[0.04] border border-white/10">
-                      {inq.businessType}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 font-medium text-cyan-highlight">
-                    {inq.requirement}
-                  </td>
-                  <td className="py-3.5 px-4 text-text-muted space-y-0.5">
-                    <div className="font-mono text-text-secondary">{inq.email}</div>
-                    <div className="text-[11px]">{inq.contact}</div>
-                  </td>
-                  <td className="py-3.5 px-4 text-text-muted whitespace-nowrap">
-                    {new Date(inq.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <select
-                      value={inq.status}
-                      onChange={(e) => handleStatusChange(inq.id, e.target.value as InquiryStatus)}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider cursor-pointer border focus:outline-none ${
-                        inq.status === 'pending' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
-                        inq.status === 'accepted' ? 'bg-cyan-primary/20 text-cyan-highlight border-cyan-secondary/40' :
-                        inq.status === 'completed' ? 'bg-mint-primary/20 text-mint-primary border-mint-primary/40' :
-                        'bg-red-500/20 text-red-300 border-red-500/40'
-                      }`}
-                    >
-                      <option value="pending" className="bg-bg-elevated text-text-primary">Pending</option>
-                      <option value="accepted" className="bg-bg-elevated text-text-primary">Accepted</option>
-                      <option value="completed" className="bg-bg-elevated text-text-primary">Completed</option>
-                      <option value="rejected" className="bg-bg-elevated text-text-primary">Rejected</option>
-                    </select>
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button
-                        onClick={() => {
-                          setSelectedInquiry(inq);
-                          setEditNotes(inq.adminNotes || '');
-                        }}
-                        className="p-1.5 rounded-lg bg-white/[0.04] text-text-secondary hover:text-cyan-highlight hover:bg-white/[0.08] transition-colors"
-                        title="View Full Inquiry Details"
-                      >
-                        <Eye size={15} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteId(inq.id)}
-                        className="p-1.5 rounded-lg bg-white/[0.04] text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                        title="Delete Inquiry"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      {/* Filter & Search Bar */}
+      <div className="p-4 rounded-2xl glass-panel border border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
+        
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 no-scrollbar">
+          {[
+            { label: 'All', value: 'all' },
+            { label: 'Pending', value: 'Pending' },
+            { label: 'Accepted', value: 'Accepted' },
+            { label: 'Completed', value: 'Completed' },
+            { label: 'Rejected', value: 'Rejected' },
+          ].map((tab) => {
+            const active = statusFilter === tab.value;
+            return (
+              <button
+                key={tab.value}
+                onClick={() => handleStatusFilterChange(tab.value)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  active
+                    ? 'bg-cyan-primary/25 border border-cyan-secondary/50 text-cyan-highlight shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.04]'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search & Sort Controls */}
+        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+          <div className="relative flex-1 md:w-64">
+            <input
+              type="text"
+              placeholder="Search by client, email, service..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-bg-primary/90 border border-white/10 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-cyan-secondary transition-all"
+            />
+            <Search size={14} className="absolute left-3 top-2.5 text-text-muted" />
+          </div>
+
+          <button
+            onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-xs font-medium text-text-secondary hover:text-text-primary transition-all cursor-pointer shrink-0"
+            title="Toggle Sort Order"
+          >
+            <ArrowUpDown size={13} />
+            <span className="hidden sm:inline">{sortBy === 'newest' ? 'Newest First' : 'Oldest First'}</span>
+          </button>
+        </div>
+
       </div>
 
-      {/* Mobile & Tablet Card List */}
-      <div className="lg:hidden space-y-4">
-        {filteredInquiries.length === 0 ? (
-          <div className="p-8 rounded-3xl glass-panel text-center text-text-muted text-xs">
-            No inquiries found matching your filters.
+      {/* Inquiries Table / List */}
+      <div className="rounded-2xl glass-panel border border-white/10 overflow-hidden shadow-xl">
+        {loading ? (
+          <div className="py-20 flex flex-col items-center justify-center gap-3 text-text-secondary">
+            <Loader2 size={28} className="animate-spin text-cyan-secondary" />
+            <span className="text-xs">Loading inquiries from Supabase...</span>
+          </div>
+        ) : inquiries.length === 0 ? (
+          <div className="py-20 text-center flex flex-col items-center justify-center p-6">
+            <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center text-text-muted mb-3">
+              <Inbox size={22} />
+            </div>
+            <h3 className="text-base font-bold text-text-primary">No inquiries found</h3>
+            <p className="text-xs text-text-secondary max-w-sm mt-1">
+              {searchTerm || statusFilter !== 'all'
+                ? 'No inquiries match your current search criteria or filter.'
+                : 'New inquiries submitted through the contact form will appear here automatically.'}
+            </p>
           </div>
         ) : (
-          filteredInquiries.map((inq) => (
-            <div key={inq.id} className="p-5 rounded-3xl glass-panel border border-white/10 space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-bold text-base text-text-primary">{inq.name}</h3>
-                  <span className="text-xs text-text-secondary">{inq.businessType}</span>
-                </div>
-
-                <select
-                  value={inq.status}
-                  onChange={(e) => handleStatusChange(inq.id, e.target.value as InquiryStatus)}
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                    inq.status === 'pending' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
-                    inq.status === 'accepted' ? 'bg-cyan-primary/20 text-cyan-highlight border-cyan-secondary/40' :
-                    inq.status === 'completed' ? 'bg-mint-primary/20 text-mint-primary border-mint-primary/40' :
-                    'bg-red-500/20 text-red-300 border-red-500/40'
-                  }`}
-                >
-                  <option value="pending" className="bg-bg-elevated text-text-primary">Pending</option>
-                  <option value="accepted" className="bg-bg-elevated text-text-primary">Accepted</option>
-                  <option value="completed" className="bg-bg-elevated text-text-primary">Completed</option>
-                  <option value="rejected" className="bg-bg-elevated text-text-primary">Rejected</option>
-                </select>
-              </div>
-
-              <div className="text-xs space-y-1 pt-2 border-t border-white/[0.05]">
-                <div><span className="text-text-muted">Need:</span> <strong className="text-cyan-highlight">{inq.requirement}</strong></div>
-                <div><span className="text-text-muted">Email:</span> <span className="font-mono text-text-secondary">{inq.email}</span></div>
-                <div><span className="text-text-muted">Phone:</span> <span className="text-text-secondary">{inq.contact}</span></div>
-                <div><span className="text-text-muted">Date:</span> <span className="text-text-secondary">{new Date(inq.createdAt).toLocaleDateString()}</span></div>
-              </div>
-
-              <div className="pt-3 border-t border-white/[0.05] flex items-center justify-between">
-                <button
-                  onClick={() => {
-                    setSelectedInquiry(inq);
-                    setEditNotes(inq.adminNotes || '');
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-cyan-primary/20 text-cyan-highlight text-xs font-semibold flex items-center gap-1"
-                >
-                  <Eye size={13} /> Full Details
-                </button>
-
-                <button
-                  onClick={() => setDeleteId(inq.id)}
-                  className="p-2 rounded-lg text-text-muted hover:text-red-400"
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            </div>
-          ))
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/[0.08] bg-white/[0.02] text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+                  <th className="py-3.5 px-4 sm:px-6">Client / Prospect</th>
+                  <th className="py-3.5 px-4">Business</th>
+                  <th className="py-3.5 px-4">Requirement</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4">Date</th>
+                  <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.05] text-xs">
+                {inquiries.map((inq) => (
+                  <tr key={inq.id} className="hover:bg-white/[0.02] transition-colors group">
+                    <td className="py-3.5 px-4 sm:px-6">
+                      <div className="font-bold text-text-primary">{inq.name}</div>
+                      <div className="text-[11px] text-text-muted flex items-center gap-2 mt-0.5">
+                        <span>{inq.email}</span>
+                        <span>•</span>
+                        <span>{inq.contact_number}</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-[11px] font-medium text-text-secondary">
+                        {inq.business_type}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="font-medium text-cyan-highlight">
+                        {inq.what_you_need}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      {statusUpdatingId === inq.id ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-text-muted">
+                          <Loader2 size={12} className="animate-spin" /> Updating...
+                        </span>
+                      ) : (
+                        <div className="relative inline-block">
+                          <select
+                            value={inq.status}
+                            onChange={(e) => handleStatusChange(inq.id, e.target.value as InquiryStatus)}
+                            className="text-[11px] font-semibold bg-bg-secondary border border-white/10 rounded-lg px-2 py-1 text-text-primary focus:outline-none focus:border-cyan-secondary cursor-pointer"
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Accepted">Accepted</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Rejected">Rejected</option>
+                          </select>
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-text-muted font-mono text-[11px]">
+                      {new Date(inq.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </td>
+                    <td className="py-3.5 px-4 sm:px-6 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setSelectedInquiry(inq)}
+                          className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-text-secondary hover:text-cyan-highlight transition-colors cursor-pointer"
+                          title="View Details"
+                        >
+                          <Eye size={14} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteId(inq.id)}
+                          className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-red-500/20 text-text-secondary hover:text-red-400 transition-colors cursor-pointer"
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
+
+        {/* Pagination Footer */}
+        <div className="p-4 border-t border-white/[0.08] bg-white/[0.01] flex items-center justify-between text-xs text-text-secondary">
+          <div>
+            Showing <span className="text-text-primary font-semibold">{inquiries.length}</span> of{' '}
+            <span className="text-text-primary font-semibold">{totalCount}</span> records (Page {currentPage} of {totalPages})
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1 || loading}
+              className="p-1.5 rounded-lg bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="px-2 font-mono text-xs">{currentPage} / {totalPages}</span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages || loading}
+              className="p-1.5 rounded-lg bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Inquiry Detail View Modal */}
+      {/* View Details Modal */}
       {selectedInquiry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div 
             onClick={() => setSelectedInquiry(null)}
-            className="fixed inset-0 bg-black/80 backdrop-blur-xl animate-fade-in"
+            className="fixed inset-0 bg-black/80 backdrop-blur-md"
           />
-
-          <div className="relative w-full max-w-2xl rounded-3xl bg-bg-elevated border border-white/15 shadow-2xl p-6 sm:p-8 z-10 animate-scale-up space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+          <div className="relative w-full max-w-xl rounded-3xl bg-bg-elevated border border-white/15 p-6 sm:p-8 z-10 shadow-2xl space-y-6 animate-scale-up my-8">
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-bold text-text-primary">
-                  Inquiry: {selectedInquiry.name}
-                </h3>
-                <span className="text-xs text-text-secondary">
-                  Received on {new Date(selectedInquiry.createdAt).toLocaleString()}
+                <span className="text-[10px] font-mono text-mint-primary uppercase tracking-widest block">
+                  INQUIRY SPECIFICATION
                 </span>
+                <h3 className="text-xl font-bold text-text-primary mt-1">
+                  {selectedInquiry.name}
+                </h3>
               </div>
-
               <button
                 onClick={() => setSelectedInquiry(null)}
-                className="p-1.5 rounded-full bg-white/[0.04] text-text-muted hover:text-text-primary"
+                className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-white/[0.05]"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
-                <span className="text-text-muted block mb-1">Business Type</span>
-                <span className="font-bold text-text-primary text-sm">{selectedInquiry.businessType}</span>
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/10 text-xs">
+              <div>
+                <span className="text-text-muted block text-[11px]">Email Address</span>
+                <span className="font-semibold text-text-primary break-all">{selectedInquiry.email}</span>
               </div>
-              <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
-                <span className="text-text-muted block mb-1">System Requirement</span>
-                <span className="font-bold text-cyan-highlight text-sm">{selectedInquiry.requirement}</span>
+              <div>
+                <span className="text-text-muted block text-[11px]">Contact Number</span>
+                <span className="font-semibold text-text-primary">{selectedInquiry.contact_number}</span>
               </div>
-              <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
-                <span className="text-text-muted block mb-1">Email Address</span>
-                <a href={`mailto:${selectedInquiry.email}`} className="font-mono text-cyan-secondary hover:underline">
-                  {selectedInquiry.email}
-                </a>
+              <div>
+                <span className="text-text-muted block text-[11px]">Business Type</span>
+                <span className="font-semibold text-text-primary">{selectedInquiry.business_type}</span>
               </div>
-              <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
-                <span className="text-text-muted block mb-1">Contact Phone</span>
-                <a href={`tel:${selectedInquiry.contact}`} className="font-mono text-cyan-secondary hover:underline">
-                  {selectedInquiry.contact}
-                </a>
+              <div>
+                <span className="text-text-muted block text-[11px]">Service Requested</span>
+                <span className="font-semibold text-cyan-highlight">{selectedInquiry.what_you_need}</span>
               </div>
             </div>
 
-            {selectedInquiry.additionalNotes && (
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10">
-                <span className="text-xs font-semibold text-text-muted block mb-2 uppercase tracking-wider">
-                  Client Project Specifications
-                </span>
-                <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap font-light">
-                  {selectedInquiry.additionalNotes}
-                </p>
+            <div>
+              <span className="text-xs font-semibold text-text-secondary block mb-1">
+                Additional Requirements / Notes
+              </span>
+              <div className="p-4 rounded-2xl bg-bg-primary/90 border border-white/10 text-xs text-text-primary whitespace-pre-wrap leading-relaxed min-h-[80px]">
+                {selectedInquiry.additional_requirement || 'No additional requirements provided.'}
               </div>
-            )}
-
-            {/* Admin Internal Notes Section */}
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                Internal Admin Notes / Action Log
-              </label>
-              <textarea
-                rows={3}
-                value={editNotes}
-                onChange={(e) => setEditNotes(e.target.value)}
-                placeholder="Log notes, meeting schedules, or estimated budget here..."
-                className="w-full p-3 rounded-xl bg-bg-primary border border-white/10 text-xs text-text-primary focus:outline-none focus:border-cyan-secondary"
-              />
-              <button
-                type="button"
-                onClick={handleSaveNotes}
-                className="px-4 py-2 rounded-xl bg-cyan-primary/20 text-cyan-highlight border border-cyan-secondary/30 text-xs font-semibold hover:bg-cyan-primary/30 transition-all"
-              >
-                Save Internal Notes
-              </button>
             </div>
 
-            {/* Action Bar */}
-            <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+            <div className="flex items-center justify-between pt-4 border-t border-white/10">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-text-muted">Status:</span>
+                {getStatusBadge(selectedInquiry.status)}
+              </div>
+
+              <div className="flex items-center gap-2">
                 <select
                   value={selectedInquiry.status}
                   onChange={(e) => handleStatusChange(selectedInquiry.id, e.target.value as InquiryStatus)}
-                  className="px-3 py-1.5 rounded-xl bg-bg-primary border border-white/10 text-xs text-text-primary"
+                  className="text-xs bg-bg-secondary border border-white/15 rounded-xl px-3 py-1.5 text-text-primary focus:outline-none focus:border-cyan-secondary"
                 >
-                  <option value="pending">Pending</option>
-                  <option value="accepted">Accepted</option>
-                  <option value="completed">Completed</option>
-                  <option value="rejected">Rejected</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Accepted">Accepted</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Rejected">Rejected</option>
                 </select>
-              </div>
 
-              <button
-                onClick={() => setSelectedInquiry(null)}
-                className="px-4 py-2 rounded-xl bg-white/[0.04] text-xs font-medium text-text-secondary hover:text-text-primary"
-              >
-                Close
-              </button>
+                <button
+                  onClick={() => setSelectedInquiry(null)}
+                  className="px-4 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-semibold text-text-primary transition-all"
+                >
+                  Close
+                </button>
+              </div>
             </div>
 
           </div>
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Modal */}
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div 
             onClick={() => setDeleteId(null)}
-            className="fixed inset-0 bg-black/80 backdrop-blur-md animate-fade-in"
+            className="fixed inset-0 bg-black/80 backdrop-blur-md"
           />
-
-          <div className="relative w-full max-w-sm rounded-3xl bg-bg-elevated border border-red-500/30 p-6 z-10 animate-scale-up space-y-4 shadow-2xl text-center">
-            <div className="w-12 h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto">
+          <div className="relative w-full max-w-sm rounded-3xl bg-bg-elevated border border-red-500/30 p-6 z-10 shadow-2xl text-center space-y-4 animate-scale-up">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 mx-auto">
               <AlertTriangle size={24} />
             </div>
-
-            <h3 className="text-lg font-bold text-text-primary">
-              Confirm Inquiries Deletion
-            </h3>
-            <p className="text-xs text-text-secondary">
-              Are you sure you want to delete this inquiry? This action cannot be undone.
-            </p>
-
-            <div className="flex items-center justify-center gap-3 pt-2">
+            <div>
+              <h3 className="text-lg font-bold text-text-primary">Delete Inquiry</h3>
+              <p className="text-xs text-text-secondary mt-1">
+                Are you sure you want to permanently remove this inquiry from Supabase? This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setDeleteId(null)}
-                className="px-4 py-2 rounded-xl bg-white/[0.04] text-xs text-text-secondary hover:text-text-primary"
+                className="flex-1 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-xs font-semibold text-text-secondary hover:text-text-primary"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 rounded-xl bg-red-500/80 hover:bg-red-500 text-xs font-bold text-white shadow-lg transition-all"
+                disabled={deleting}
+                className="flex-1 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-xs font-semibold text-red-300 hover:bg-red-500/30 flex items-center justify-center gap-1"
               >
-                Delete Permanently
+                {deleting ? <Loader2 size={14} className="animate-spin" /> : 'Delete'}
               </button>
             </div>
           </div>

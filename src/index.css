@@ -10,8 +10,8 @@
     --cyan-primary: #0F8F9C;
     --cyan-secondary: #18B8C4;
     --cyan-highlight: #3DD6DE;
-    --green-primary: #7CFF6A;
-    --green-secondary: #A3FF85;
+    --green-primary: #0077B6;
+    --green-secondary: #38BDF8;
   }
 
   body {
@@ -23,7 +23,7 @@
 
 /* Custom Signature Vertical Gradient for Text */
 .text-prism-gradient {
-  background: linear-gradient(180deg, #7CFF6A 0%, #18B8C4 50%, #0F8F9C 100%);
+  background: linear-gradient(180deg, #0077B6 0%, #18B8C4 50%, #0F8F9C 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -31,7 +31,7 @@
 }
 
 .text-prism-gradient-subtle {
-  background: linear-gradient(180deg, #A3FF85 0%, #3DD6DE 60%, #18B8C4 100%);
+  background: linear-gradient(180deg, #38BDF8 0%, #3DD6DE 60%, #18B8C4 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -82,8 +82,8 @@
 
 .neu-button:hover {
   background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 100%);
-  border-color: rgba(124, 255, 106, 0.3);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(124, 255, 106, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border-color: rgba(0, 119, 182, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 119, 182, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25);
   transform: translateY(-1px);
 }
 
@@ -95,7 +95,7 @@
 /* Atmospheric lighting backgrounds */
 .bg-ambient-hero {
   background: 
-    radial-gradient(ellipse 60% 40% at 50% -10%, rgba(124, 255, 106, 0.08), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 50% -10%, rgba(0, 119, 182, 0.12), transparent 70%),
     radial-gradient(ellipse 70% 50% at 50% 110%, rgba(15, 143, 156, 0.12), transparent 70%),
     #050505;
 }
@@ -103,7 +103,7 @@
 .bg-ambient-section {
   background: 
     radial-gradient(circle at 80% 20%, rgba(24, 184, 196, 0.04), transparent 50%),
-    radial-gradient(circle at 20% 80%, rgba(124, 255, 106, 0.03), transparent 50%);
+    radial-gradient(circle at 20% 80%, rgba(0, 119, 182, 0.05), transparent 50%);
 }
 
 /* Custom sleek scrollbar */

@@ -221,13 +221,13 @@ export const AiRobot: React.FC<AiRobotProps> = ({ className = '' }) => {
 
             {/* Signature Vertical Glow Gradients */}
             <linearGradient id="signaturePrism" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#7CFF6A" />
+              <stop offset="0%" stopColor="#0077B6" />
               <stop offset="50%" stopColor="#18B8C4" />
               <stop offset="100%" stopColor="#0F8F9C" />
             </linearGradient>
 
             <linearGradient id="antennaGlow" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#A3FF85" />
+              <stop offset="0%" stopColor="#38BDF8" />
               <stop offset="100%" stopColor="#18B8C4" />
             </linearGradient>
 
@@ -264,7 +264,7 @@ export const AiRobot: React.FC<AiRobotProps> = ({ className = '' }) => {
             stroke="url(#signaturePrism)" 
             strokeWidth="1.5" 
           />
-          <circle cx="53" cy="198" r="3" fill="#7CFF6A" filter="url(#eyeGlow)" />
+          <circle cx="53" cy="198" r="3" fill="#0077B6" filter="url(#eyeGlow)" />
 
           <path 
             d="M 228 170 C 238 170 242 185 235 202 C 231 210 222 214 218 210 Z" 
@@ -272,7 +272,7 @@ export const AiRobot: React.FC<AiRobotProps> = ({ className = '' }) => {
             stroke="url(#signaturePrism)" 
             strokeWidth="1.5" 
           />
-          <circle cx="227" cy="198" r="3" fill="#7CFF6A" filter="url(#eyeGlow)" />
+          <circle cx="227" cy="198" r="3" fill="#0077B6" filter="url(#eyeGlow)" />
 
           {/* Top Sensor Antenna */}
           <line x1="140" y1="42" x2="140" y2="18" stroke="#18B8C4" strokeWidth="3" strokeLinecap="round" />
@@ -334,8 +334,8 @@ export const AiRobot: React.FC<AiRobotProps> = ({ className = '' }) => {
                 <line x1="156" y1="112" x2="178" y2="112" />
               </g>
             ) : mood === 'happy' ? (
-              // Happy Mood: Joyful curved arches + bright mint glow
-              <g stroke="#7CFF6A" strokeWidth="4.5" strokeLinecap="round" fill="none" filter="url(#eyeGlow)">
+              // Happy Mood: Joyful curved arches + bright deep sea blue glow
+              <g stroke="#0077B6" strokeWidth="4.5" strokeLinecap="round" fill="none" filter="url(#eyeGlow)">
                 <path d="M 102 116 Q 113 100 124 116" />
                 <path d="M 156 116 Q 167 100 178 116" />
                 {/* Cute blushes */}
@@ -349,15 +349,15 @@ export const AiRobot: React.FC<AiRobotProps> = ({ className = '' }) => {
                 <path d="M 156 108 Q 167 118 178 108" />
               </g>
             ) : (
-              // Idle / Neutral Mood: Expressive cyan ovals with light green pupil glints
+              // Idle / Neutral Mood: Expressive cyan ovals with deep sea blue pupil glints
               <g filter="url(#eyeGlow)">
                 {/* Left Eye */}
                 <rect x="103" y="100" width="18" height="24" rx="9" fill="#18B8C4" />
-                <circle cx="109" cy="107" r="3.5" fill="#7CFF6A" />
+                <circle cx="109" cy="107" r="3.5" fill="#0077B6" />
 
                 {/* Right Eye */}
                 <rect x="159" y="100" width="18" height="24" rx="9" fill="#18B8C4" />
-                <circle cx="165" cy="107" r="3.5" fill="#7CFF6A" />
+                <circle cx="165" cy="107" r="3.5" fill="#0077B6" />
               </g>
             )}
           </g>
@@ -366,7 +366,7 @@ export const AiRobot: React.FC<AiRobotProps> = ({ className = '' }) => {
           {mood === 'happy' ? (
             <path 
               d="M 130 144 Q 140 153 150 144" 
-              stroke="#7CFF6A" 
+              stroke="#0077B6" 
               strokeWidth="2.5" 
               strokeLinecap="round" 
               fill="none" 

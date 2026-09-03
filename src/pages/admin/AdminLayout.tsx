@@ -9,28 +9,70 @@ import {
   LogOut, 
   ExternalLink,
   Shield,
+  ShieldAlert,
   Menu,
   X,
-  Sparkles
+  Loader2
 } from 'lucide-react';
 import { authService } from '../../services/authService';
+import { AdminUser } from '../../types';
 
 export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const currentUser = authService.getCurrentUser();
+  
+  // Auth & authorization state
+  const [loading, setLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
 
   useEffect(() => {
-    // Protected route check
-    if (!authService.isAuthenticated()) {
-      navigate('/admin/login');
-    }
+    let isMounted = true;
+
+    const verifyAccess = async () => {
+      setLoading(true);
+      const authStatus = await authService.checkIsAdmin();
+
+      if (!isMounted) return;
+
+      if (!authStatus.isAuthenticated) {
+        navigate('/admin/login', { replace: true });
+        return;
+      }
+
+      if (!authStatus.isAdmin) {
+        setIsAuthorized(false);
+        setCurrentUser(authStatus.user);
+        setLoading(false);
+        return;
+      }
+
+      setIsAuthorized(true);
+      setCurrentUser(authStatus.user);
+      setLoading(false);
+    };
+
+    verifyAccess();
+
+    // Listen for real-time auth changes (e.g. session expired, signed out from another tab)
+    const sub = authService.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        navigate('/admin/login', { replace: true });
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        verifyAccess();
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      sub.unsubscribe();
+    };
   }, [navigate]);
 
   const handleLogout = async () => {
     await authService.logout();
-    navigate('/admin/login');
+    navigate('/admin/login', { replace: true });
   };
 
   const navItems = [
@@ -48,6 +90,58 @@ export const AdminLayout: React.FC = () => {
     return location.pathname.startsWith(item.path);
   };
 
+  // 1. Loading State (Prevents flash of admin content)
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-bg-elevated border border-white/10 flex items-center justify-center p-2 shadow-sm animate-pulse">
+            <Shield size={24} className="text-cyan-secondary" />
+          </div>
+          <div className="flex items-center gap-2 text-text-secondary text-sm">
+            <Loader2 size={16} className="animate-spin text-mint-primary" />
+            <span>Verifying administrator privileges...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Unauthorized State (Authenticated user is not an administrator)
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col items-center justify-center p-6">
+        <div className="max-w-md w-full p-8 rounded-3xl glass-panel-elevated border border-red-500/30 text-center space-y-5 animate-scale-up">
+          <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 mx-auto">
+            <ShieldAlert size={32} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-text-primary">Access Restricted</h2>
+            <p className="text-sm text-text-secondary mt-2">
+              Your account (<span className="text-white font-mono">{currentUser?.email}</span>) does not have administrator privileges in this Supabase organization.
+            </p>
+          </div>
+          <div className="pt-4 flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => navigate('/')}
+              className="flex-1 py-2.5 px-4 rounded-xl bg-white/[0.05] border border-white/10 text-xs font-semibold text-text-secondary hover:text-text-primary transition-all"
+            >
+              Return Home
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex-1 py-2.5 px-4 rounded-xl bg-red-500/20 border border-red-500/30 text-xs font-semibold text-red-300 hover:bg-red-500/30 transition-all flex items-center justify-center gap-1.5"
+            >
+              <LogOut size={14} />
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Authorized Admin Dashboard View
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col md:flex-row">
       
@@ -61,13 +155,13 @@ export const AdminLayout: React.FC = () => {
               <svg viewBox="0 0 40 40" className="w-full h-full">
                 <defs>
                   <linearGradient id="adminSideGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#7CFF6A" />
+                    <stop offset="0%" stopColor="#0077B6" />
                     <stop offset="50%" stopColor="#18B8C4" />
                     <stop offset="100%" stopColor="#0F8F9C" />
                   </linearGradient>
                 </defs>
                 <polygon points="20,4 36,34 4,34" fill="none" stroke="url(#adminSideGrad)" strokeWidth="4" strokeLinejoin="round" />
-                <circle cx="20" cy="22" r="3.5" fill="#7CFF6A" />
+                <circle cx="20" cy="22" r="3.5" fill="#0077B6" />
               </svg>
             </div>
             <div>
@@ -120,7 +214,7 @@ export const AdminLayout: React.FC = () => {
           <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between">
             <div className="truncate mr-2">
               <span className="text-xs font-bold text-text-primary block truncate">
-                {currentUser?.name || 'Admin'}
+                {currentUser?.name || currentUser?.full_name || 'Admin'}
               </span>
               <span className="text-[10px] text-text-muted truncate block font-mono">
                 {currentUser?.email || 'admin@prismflow.tech'}
@@ -129,7 +223,7 @@ export const AdminLayout: React.FC = () => {
 
             <button
               onClick={handleLogout}
-              className="p-1.5 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              className="p-1.5 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
               title="Sign Out"
             >
               <LogOut size={15} />
@@ -146,7 +240,7 @@ export const AdminLayout: React.FC = () => {
           <div className="w-7 h-7 rounded-lg bg-bg-elevated border border-white/10 flex items-center justify-center p-1">
             <svg viewBox="0 0 40 40" className="w-full h-full">
               <polygon points="20,4 36,34 4,34" fill="none" stroke="#18B8C4" strokeWidth="4" />
-              <circle cx="20" cy="22" r="3.5" fill="#7CFF6A" />
+              <circle cx="20" cy="22" r="3.5" fill="#0077B6" />
             </svg>
           </div>
           <span className="font-bold text-sm text-text-primary">Admin Center</span>
