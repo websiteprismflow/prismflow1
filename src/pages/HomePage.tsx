@@ -8,6 +8,7 @@ import { Testimonials } from '../components/Testimonials';
 import { CtaSection } from '../components/CtaSection';
 import { ContactSection } from '../components/ContactSection';
 import { Footer } from '../components/Footer';
+import { RobotCompanion } from '../components/robot';
 
 export const HomePage: React.FC = () => {
   const [selectedRequirement, setSelectedRequirement] = useState<string>('');
@@ -27,6 +28,9 @@ export const HomePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col selection:bg-cyan-primary/30 selection:text-mint-primary overflow-x-hidden">
       
+      {/* Interactive 3D AI Robot Companion (Desktop Only) */}
+      <RobotCompanion />
+
       {/* Navigation */}
       <Navbar onNavigateToSection={scrollToSection} />
 
