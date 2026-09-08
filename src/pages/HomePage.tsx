@@ -6,7 +6,6 @@ import { TechStrip } from '../components/TechStrip';
 import { Services } from '../components/Services';
 import { Portfolio } from '../components/Portfolio';
 import { Testimonials } from '../components/Testimonials';
-import { CtaSection } from '../components/CtaSection';
 import { ContactSection } from '../components/ContactSection';
 import { Footer } from '../components/Footer';
 
@@ -56,12 +55,7 @@ export const HomePage: React.FC = () => {
         {/* 5. Testimonials: Client Stories */}
         <Testimonials />
 
-        {/* 6. Signature CTA Section */}
-        <CtaSection 
-          onStartProject={() => scrollToSection('contact')}
-        />
-
-        {/* 7. Contact / Requirement Form */}
+        {/* 6. Collaborate & Contact / Project Inquiry Form */}
         <ContactSection initialRequirement={selectedRequirement} />
       </main>
 

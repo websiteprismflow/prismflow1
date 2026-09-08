@@ -26,23 +26,34 @@ export const Testimonials: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.03] border border-white/10 text-cyan-highlight text-xs font-semibold uppercase tracking-wider mb-5">
-            <Sparkles size={13} className="text-cyan-secondary" />
-            <span>Social Proof</span>
+        {/* Section Header with Robot Target on Desktop (Left Side) */}
+        <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-14 mb-16 sm:mb-20">
+          
+          {/* Reserved Target Anchor for 3D AI Robot Companion on Desktop (Left Side) */}
+          <div
+            id="testimonials-robot-target"
+            className="hidden lg:flex w-[290px] lg:w-[320px] xl:w-[350px] h-[320px] shrink-0 pointer-events-none items-center justify-center"
+          />
+
+          {/* Header Text Content */}
+          <div className="text-center lg:text-left max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.03] border border-white/10 text-cyan-highlight text-xs font-semibold uppercase tracking-wider mb-5">
+              <Sparkles size={13} className="text-cyan-secondary" />
+              <span>Social Proof</span>
+            </div>
+
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-text-primary tracking-tight leading-tight mb-5">
+              Loved by Founders & <br className="hidden sm:inline" />
+              <span className="text-transparent bg-clip-text bg-prism-gradient">
+                Engineering Leaders
+              </span>
+            </h2>
+
+            <p className="text-base sm:text-lg text-text-secondary">
+              Hear directly from the teams who scaled their operations and elevated their design with Prism Flow.
+            </p>
           </div>
 
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-text-primary tracking-tight leading-tight mb-5">
-            Loved by Founders & <br className="hidden sm:inline" />
-            <span className="text-transparent bg-clip-text bg-prism-gradient">
-              Engineering Leaders
-            </span>
-          </h2>
-
-          <p className="text-base sm:text-lg text-text-secondary">
-            Hear directly from the teams who scaled their operations and elevated their design with Prism Flow.
-          </p>
         </div>
 
         {/* Testimonials Content */}

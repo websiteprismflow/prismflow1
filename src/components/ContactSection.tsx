@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, CheckCircle, Loader2 } from 'lucide-react';
+import { ArrowRight, CheckCircle, Loader2, Sparkles } from 'lucide-react';
 import { inquiryService, VALID_BUSINESS_TYPES, VALID_WHAT_YOU_NEED } from '../services/inquiryService';
 
 interface ContactSectionProps {
@@ -89,29 +89,41 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
       
       {/* Background Lighting */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-primary/10 rounded-full blur-[160px] pointer-events-none -z-10" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] sm:w-[900px] h-[350px] bg-gradient-to-b from-mint-primary/10 via-cyan-secondary/15 to-transparent rounded-full blur-[140px] pointer-events-none -z-10" />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Section Header */}
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/10 mb-4 shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-mint-primary animate-pulse" />
-            <span className="text-xs font-semibold tracking-wider text-text-secondary uppercase">
-              PROJECT INQUIRY
-            </span>
+        {/* Section Header with Robot Target on Desktop (Right Side) */}
+        <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-14 mb-14">
+          
+          {/* Header Text Content on Left */}
+          <div className="text-center lg:text-left max-w-xl">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 mb-5 shadow-sm">
+              <Sparkles size={13} className="text-mint-primary" />
+              <span className="text-xs font-semibold tracking-wider text-text-secondary uppercase">
+                Let's Collaborate
+              </span>
+            </div>
+
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-text-primary mb-4 leading-tight">
+              Have an idea worth building?
+            </h2>
+
+            <p className="text-base sm:text-lg text-text-secondary leading-relaxed">
+              Let's turn it into an intelligent digital system. Share your vision and our engineering team will review your specifications within 24 hours.
+            </p>
           </div>
 
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-text-primary mb-4">
-            Tell us what you want to build.
-          </h2>
+          {/* Reserved Target Anchor for 3D AI Robot Companion on Desktop (Right Side) */}
+          <div
+            id="contact-robot-target"
+            className="hidden lg:flex w-[290px] lg:w-[320px] xl:w-[350px] h-[320px] shrink-0 pointer-events-none items-center justify-center"
+          />
 
-          <p className="text-base text-text-secondary">
-            Share your vision. Our engineering team will review your specifications and get back to you within 24 hours.
-          </p>
         </div>
 
         {/* Form Container */}
-        <div className="relative rounded-3xl glass-panel-elevated p-7 sm:p-10 border border-white/15 shadow-2xl">
+        <div className="relative rounded-3xl glass-panel-elevated p-7 sm:p-10 border border-white/15 shadow-2xl max-w-4xl mx-auto">
           
           {submitted ? (
             <div className="py-12 text-center flex flex-col items-center justify-center animate-scale-up">
@@ -266,7 +278,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
                     </span>
                   ) : (
                     <>
-                      <span>Send Request</span>
+                      <span>Start a Project with Us</span>
                       <ArrowRight size={16} />
                     </>
                   )}

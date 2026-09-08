@@ -9,13 +9,13 @@ interface HeroProps {
 export const Hero: React.FC<HeroProps> = ({ onExploreWork, onContactClick }) => {
   return (
     <section id="hero" className="relative min-h-screen pt-28 pb-16 sm:pt-36 sm:pb-24 flex items-center justify-center overflow-hidden bg-ambient-hero">
-      
+
       {/* Background Lighting Gradients (Top Green, Bottom Cyan) */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[650px] sm:w-[900px] h-[350px] bg-gradient-to-b from-mint-primary/10 via-cyan-secondary/5 to-transparent blur-[120px] pointer-events-none -z-10" />
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[700px] sm:w-[1000px] h-[350px] bg-gradient-to-t from-cyan-primary/15 via-cyan-secondary/5 to-transparent blur-[140px] pointer-events-none -z-10" />
 
       {/* Subtle Grid Ambient Lines */}
-      <div 
+      <div
         className="absolute inset-0 opacity-[0.03] pointer-events-none -z-10"
         style={{
           backgroundImage: 'linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)',
@@ -25,18 +25,21 @@ export const Hero: React.FC<HeroProps> = ({ onExploreWork, onContactClick }) => 
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8 xl:gap-12 w-full">
-          
+
           {/* Typography & CTAs Column on Left Side */}
           <div className="w-full lg:flex-1 min-w-0 max-w-xl xl:max-w-2xl 2xl:max-w-3xl flex flex-col items-center lg:items-start text-center lg:text-left z-10">
-            
+
             {/* Main Headline */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl 2xl:text-[4.25rem] lg:font-apple font-extrabold tracking-tight lg:tracking-[-0.03em] text-text-primary leading-[1.08] lg:leading-[1.07] mb-5 lg:mb-6">
-              <span className="block">WE BUILD THINGS</span>
-              {/* Signature Vertical Gradient Lighting */}
-              <span className="block my-1 text-prism-gradient tracking-tight font-black">
+            <h1 className="inline-flex flex-col items-center text-center text-2xl sm:text-3xl md:text-4xl lg:text-[2.65rem] xl:text-[3.15rem] 2xl:text-[3.5rem] lg:font-apple font-extrabold tracking-tight lg:tracking-[-0.03em] text-text-primary leading-[1.15] lg:leading-[1.12] mb-5 lg:mb-6">
+              <span className="block">
+                WE <span className="text-prism-gradient font-black">BUILD</span> THINGS
+              </span>
+              <span className="block my-1.5 text-lg sm:text-xl md:text-2xl lg:text-[1.85rem] xl:text-[2.2rem] 2xl:text-[2.45rem] font-extrabold tracking-tight text-text-primary">
                 THAT MOVE YOUR
               </span>
-              <span className="block text-text-primary">BUSINESS FORWARD.</span>
+              <span className="block text-text-primary">
+                <span className="text-prism-gradient font-black">BUSINESS</span> FORWARD.
+              </span>
             </h1>
 
             {/* Subheading */}

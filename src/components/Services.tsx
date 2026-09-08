@@ -34,8 +34,15 @@ export const Services: React.FC<ServicesProps> = ({ onContactWithRequirement }) 
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Section Header with Robot Right Target */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 mb-16 sm:mb-20">
+        {/* Section Header with Robot on the Left Side */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-start gap-8 lg:gap-14 mb-16 sm:mb-20">
+          
+          {/* Reserved Target Anchor for 3D Robot Companion on the Left Side */}
+          <div
+            id="services-robot-target"
+            className="hidden lg:flex w-[290px] lg:w-[320px] xl:w-[350px] h-[320px] shrink-0 pointer-events-none items-center justify-center"
+          />
+
           <div className="max-w-2xl lg:max-w-xl xl:max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/10 mb-4">
               <span className="w-1.5 h-1.5 rounded-full bg-mint-primary" />
@@ -53,11 +60,6 @@ export const Services: React.FC<ServicesProps> = ({ onContactWithRequirement }) 
             </p>
           </div>
 
-          {/* Reserved Target Anchor for 3D Robot Companion on the Right Side of WHAT WE BUILD */}
-          <div
-            id="services-robot-target"
-            className="hidden lg:flex w-[290px] lg:w-[320px] xl:w-[350px] h-[320px] shrink-0 pointer-events-none items-center justify-center"
-          />
         </div>
 
         {/* 4 Service Cards Grid (2x2) */}

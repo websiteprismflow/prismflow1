@@ -2,12 +2,14 @@ import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { RobotModel } from './RobotModel';
 
-type SectionState = 'hero' | 'services' | 'portfolio';
+type SectionState = 'hero' | 'services' | 'portfolio' | 'testimonials' | 'contact';
 
 const SECTION_TEXTS: Record<SectionState, string> = {
-  hero: 'Hi, welcome to PrismFlow World 👋',
-  services: "Here's what we build for you ✨",
+  hero: 'Hi, welcome to the world of Prism Flow 👋',
+  services: 'What we can build for you ✨',
   portfolio: "Things we've brought to life 🚀",
+  testimonials: 'What our lovely clients say about us ⭐',
+  contact: "Let's build together 🤝",
 };
 
 export const HeroRobot: React.FC = () => {
@@ -134,15 +136,19 @@ export const HeroRobot: React.FC = () => {
       const delta = Math.min(clock.getDelta(), 0.1);
       const time = clock.getElapsedTime();
 
-      // 1. Calculate Target Position between Hero -> Services -> Portfolio Anchors
+      // 1. Calculate Target Position between Hero -> Services -> Portfolio -> Testimonials -> Contact Anchors
       const heroTarget = document.getElementById('hero-robot-target');
       const servicesTarget = document.getElementById('services-robot-target');
       const portfolioTarget = document.getElementById('portfolio-robot-target');
+      const testimonialsTarget = document.getElementById('testimonials-robot-target');
+      const contactTarget = document.getElementById('contact-robot-target');
 
       if (heroTarget && servicesTarget && portfolioTarget) {
         const heroRect = heroTarget.getBoundingClientRect();
         const servicesRect = servicesTarget.getBoundingClientRect();
         const portfolioRect = portfolioTarget.getBoundingClientRect();
+        const testimonialsRect = testimonialsTarget?.getBoundingClientRect();
+        const contactRect = contactTarget?.getBoundingClientRect();
 
         const windowH = window.innerHeight;
         const settleY = 160;
@@ -159,11 +165,39 @@ export const HeroRobot: React.FC = () => {
         t2 = Math.max(0, Math.min(1, t2));
         const smoothT2 = t2 * t2 * (3 - 2 * t2);
 
+        // Transition 3: Portfolio -> Testimonials
+        let smoothT3 = 0;
+        if (testimonialsRect) {
+          const startY3 = windowH * 0.85;
+          let t3 = (startY3 - testimonialsRect.top) / (startY3 - settleY);
+          t3 = Math.max(0, Math.min(1, t3));
+          smoothT3 = t3 * t3 * (3 - 2 * t3);
+        }
+
+        // Transition 4: Testimonials -> Contact
+        let smoothT4 = 0;
+        if (contactRect) {
+          const startY4 = windowH * 0.85;
+          let t4 = (startY4 - contactRect.top) / (startY4 - settleY);
+          t4 = Math.max(0, Math.min(1, t4));
+          smoothT4 = t4 * t4 * (3 - 2 * t4);
+        }
+
         let targetX: number;
         let targetY: number;
         let currentSection: SectionState = 'hero';
 
-        if (t2 > 0) {
+        if (contactRect && testimonialsRect && smoothT4 > 0) {
+          // Between Testimonials (left side) and Contact (right side)
+          targetX = testimonialsRect.left + (contactRect.left - testimonialsRect.left) * smoothT4;
+          targetY = testimonialsRect.top + (contactRect.top - testimonialsRect.top) * smoothT4;
+          currentSection = smoothT4 > 0.5 ? 'contact' : 'testimonials';
+        } else if (testimonialsRect && smoothT3 > 0) {
+          // Between Portfolio (right side) and Testimonials (left side)
+          targetX = portfolioRect.left + (testimonialsRect.left - portfolioRect.left) * smoothT3;
+          targetY = portfolioRect.top + (testimonialsRect.top - portfolioRect.top) * smoothT3;
+          currentSection = smoothT3 > 0.5 ? 'testimonials' : 'portfolio';
+        } else if (t2 > 0) {
           // Between Services and Portfolio
           targetX = servicesRect.left + (portfolioRect.left - servicesRect.left) * smoothT2;
           targetY = servicesRect.top + (portfolioRect.top - servicesRect.top) * smoothT2;
@@ -175,9 +209,35 @@ export const HeroRobot: React.FC = () => {
           currentSection = smoothT1 > 0.5 ? 'services' : 'hero';
         }
 
-        // Opacity: Fades out smoothly when user scrolls past Portfolio
+        // Smooth base orientation:
+        // In Hero (right side), body angles slightly left (-0.12).
+        // At Services (left side), body smoothly angles towards right (+0.14).
+        // At Portfolio (right side), body angles towards left (-0.12).
+        // At Testimonials (left side), body angles towards right (+0.14).
+        // At Contact (right side), body returns to facing left (-0.12).
+        let baseRotY = -0.12;
+        if (smoothT4 > 0) {
+          baseRotY = 0.14 + (-0.12 - 0.14) * smoothT4;
+        } else if (smoothT3 > 0) {
+          baseRotY = -0.12 + (0.14 - (-0.12)) * smoothT3;
+        } else if (smoothT2 > 0) {
+          baseRotY = 0.14 + (-0.12 - 0.14) * smoothT2;
+        } else {
+          baseRotY = -0.12 + (0.14 - (-0.12)) * smoothT1;
+        }
+        robot.root.rotation.y = baseRotY;
+
+        // Opacity: Fades out smoothly when user scrolls past the active section
         let targetOpacity = 1;
-        if (portfolioRect.bottom < 320) {
+        if (contactRect) {
+          if (contactRect.bottom < 260) {
+            targetOpacity = Math.max(0, Math.min(1, (contactRect.bottom - 40) / 220));
+          }
+        } else if (testimonialsRect) {
+          if (testimonialsRect.bottom < 260) {
+            targetOpacity = Math.max(0, Math.min(1, (testimonialsRect.bottom - 40) / 220));
+          }
+        } else if (portfolioRect.bottom < 320) {
           targetOpacity = Math.max(0, Math.min(1, (portfolioRect.bottom - 40) / 260));
         }
 
@@ -187,9 +247,9 @@ export const HeroRobot: React.FC = () => {
           currentY = targetY;
           currentOpacity = targetOpacity;
         } else {
-          // Silky smooth lerp
-          currentX += (targetX - currentX) * 0.12;
-          currentY += (targetY - currentY) * 0.12;
+          // Silky smooth lerp (0.13 gives high responsiveness and zero jitter)
+          currentX += (targetX - currentX) * 0.13;
+          currentY += (targetY - currentY) * 0.13;
           currentOpacity += (targetOpacity - currentOpacity) * 0.1;
         }
 
