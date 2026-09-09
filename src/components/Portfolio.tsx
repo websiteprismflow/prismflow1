@@ -130,7 +130,7 @@ export const Portfolio: React.FC = () => {
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
-          className="flex items-center gap-2.5 overflow-x-auto pb-3 mb-8 sm:mb-10 no-scrollbar overscroll-x-contain touch-pan-x cursor-grab active:cursor-grabbing select-none w-full scroll-smooth"
+          className="flex items-center gap-3 sm:gap-2.5 overflow-x-auto py-2.5 pb-4 mb-10 sm:mb-12 no-scrollbar overscroll-x-contain touch-pan-x cursor-grab active:cursor-grabbing select-none w-full scroll-smooth"
         >
           {categories.map((cat) => {
             const isActive = selectedCategory === cat.value;
@@ -142,12 +142,12 @@ export const Portfolio: React.FC = () => {
                   if (hasMovedRef.current) return;
                   handleCategorySelect(cat.value);
                 }}
-                className={`shrink-0 px-4 py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-300 cursor-pointer items-center gap-1.5 ${
+                className={`shrink-0 px-5 py-2.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-300 cursor-pointer items-center gap-2 ${
                   cat.value === 'All' ? 'hidden md:flex' : 'flex'
                 } ${
                   isActive
-                    ? 'bg-gradient-to-r from-mint-primary/25 via-cyan-primary/20 to-mint-primary/25 border border-mint-primary/60 text-white shadow-lg shadow-cyan-primary/20 scale-105 md:scale-100 ring-1 ring-mint-primary/40 font-semibold'
-                    : 'bg-white/[0.02] border border-white/[0.06] text-text-secondary hover:text-text-primary hover:bg-white/[0.05]'
+                    ? 'bg-gradient-to-r from-mint-primary/30 via-cyan-primary/25 to-mint-primary/30 border border-cyan-secondary/70 text-white shadow-[0_4px_24px_rgba(24,184,196,0.28)] ring-1 ring-cyan-secondary/50 font-semibold'
+                    : 'bg-white/[0.025] border border-white/[0.08] text-text-secondary hover:text-text-primary hover:bg-white/[0.06]'
                 }`}
               >
                 {isActive && (
