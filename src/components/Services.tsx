@@ -73,7 +73,9 @@ export const Services: React.FC<ServicesProps> = ({ onContactWithRequirement }) 
                 onMouseEnter={() => setActiveCard(service.id)}
                 onMouseLeave={() => setActiveCard(null)}
                 onClick={() => handleCardClick(service.title)}
-                className="group relative p-7 sm:p-8 rounded-3xl glass-panel-interactive flex flex-col justify-between cursor-pointer"
+                className={`group relative p-7 sm:p-8 rounded-3xl glass-panel-interactive flex-col justify-between cursor-pointer ${
+                  service.id === 'saas-applications' ? 'hidden md:flex' : 'flex'
+                }`}
               >
                 {/* Top Card Bar */}
                 <div>

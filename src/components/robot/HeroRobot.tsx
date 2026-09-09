@@ -318,16 +318,16 @@ export const HeroRobot: React.FC = () => {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] bg-gradient-to-tr from-[#0077B6]/20 via-[#18B8C4]/15 to-transparent rounded-full blur-[70px] pointer-events-none -z-10" />
 
         {/* Elegant Minimalist Welcome / Section Pill with Smooth Crossfade */}
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap transition-opacity duration-300">
+        <div className="absolute -top-2 lg:-top-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none whitespace-nowrap transition-opacity duration-300">
           <div
             style={{ opacity: textOpacity }}
-            className="px-3.5 py-1.5 rounded-full bg-[#0A1422]/88 backdrop-blur-md border border-white/15 shadow-[0_8px_24px_rgba(0,180,216,0.2)] flex items-center gap-2 transition-all duration-300"
+            className="px-4.5 py-2 sm:px-5 sm:py-2 rounded-full bg-[#0A1422]/90 backdrop-blur-md border border-white/20 shadow-[0_8px_28px_rgba(0,180,216,0.25)] flex items-center gap-2.5 transition-all duration-300"
           >
-            <span className="relative flex h-2 w-2">
+            <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00F0FF] opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00F0FF]" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00F0FF]" />
             </span>
-            <span className="text-xs font-medium text-slate-100 tracking-tight">
+            <span className="text-sm lg:text-base xl:text-[17px] font-semibold text-white tracking-tight">
               {SECTION_TEXTS[activeText]}
             </span>
           </div>

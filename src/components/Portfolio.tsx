@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ExternalLink, Play, Sparkles, Loader2 } from 'lucide-react';
 import { portfolioService } from '../services/portfolioService';
 import { PortfolioProject } from '../types';
@@ -15,10 +15,63 @@ const categories = [
 
 export const Portfolio: React.FC = () => {
   const [projects, setProjects] = useState<PortfolioProject[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'Website';
+    }
+    return 'All';
+  });
   const [selectedProject, setSelectedProject] = useState<PortfolioProject | null>(null);
   const [hoveredProjectId, setHoveredProjectId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const scrollLeftRef = useRef(0);
+  const hasMovedRef = useRef(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const container = tabsContainerRef.current;
+    if (!container) return;
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    startXRef.current = e.pageX - container.offsetLeft;
+    scrollLeftRef.current = container.scrollLeft;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingRef.current) return;
+    const container = tabsContainerRef.current;
+    if (!container) return;
+    e.preventDefault();
+    const x = e.pageX - container.offsetLeft;
+    const walk = (x - startXRef.current) * 1.5;
+    if (Math.abs(walk) > 4) {
+      hasMovedRef.current = true;
+    }
+    container.scrollLeft = scrollLeftRef.current - walk;
+  };
+
+  const handleMouseUp = () => {
+    isDraggingRef.current = false;
+  };
+
+  const handleCategorySelect = (categoryValue: string) => {
+    setSelectedCategory(categoryValue);
+    // Mobile only: automatically scroll sideways to center the selected category
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      const container = tabsContainerRef.current;
+      const button = tabRefs.current[categoryValue];
+      if (container && button) {
+        const scrollLeft = button.offsetLeft - (container.clientWidth / 2) + (button.clientWidth / 2);
+        container.scrollTo({
+          left: scrollLeft,
+          behavior: 'smooth'
+        });
+      }
+    }
+  };
 
   const loadProjects = async () => {
     setLoading(true);
@@ -71,27 +124,44 @@ export const Portfolio: React.FC = () => {
         </div>
 
         {/* Category Filter Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-10 no-scrollbar">
+        <div 
+          ref={tabsContainerRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          className="flex items-center gap-2.5 overflow-x-auto pb-3 mb-8 sm:mb-10 no-scrollbar overscroll-x-contain touch-pan-x cursor-grab active:cursor-grabbing select-none w-full scroll-smooth"
+        >
           {categories.map((cat) => {
             const isActive = selectedCategory === cat.value;
             return (
               <button
                 key={cat.value}
-                onClick={() => setSelectedCategory(cat.value)}
-                className={`px-4 py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                ref={(el) => { tabRefs.current[cat.value] = el; }}
+                onClick={() => {
+                  if (hasMovedRef.current) return;
+                  handleCategorySelect(cat.value);
+                }}
+                className={`shrink-0 px-4 py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-300 cursor-pointer items-center gap-1.5 ${
+                  cat.value === 'All' ? 'hidden md:flex' : 'flex'
+                } ${
                   isActive
-                    ? 'bg-gradient-to-b from-white/15 to-white/5 border border-mint-primary/40 text-text-primary shadow-sm shadow-mint-primary/10'
+                    ? 'bg-gradient-to-r from-mint-primary/25 via-cyan-primary/20 to-mint-primary/25 border border-mint-primary/60 text-white shadow-lg shadow-cyan-primary/20 scale-105 md:scale-100 ring-1 ring-mint-primary/40 font-semibold'
                     : 'bg-white/[0.02] border border-white/[0.06] text-text-secondary hover:text-text-primary hover:bg-white/[0.05]'
                 }`}
               >
-                {cat.label}
+                {isActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-highlight animate-pulse shrink-0 md:hidden" />
+                )}
+                <span>{cat.label}</span>
               </button>
             );
           })}
         </div>
 
         {/* Portfolio Projects Grid */}
-        {loading ? (
+        <div key={selectedCategory} className="animate-slide-side md:animate-none">
+          {loading ? (
           <div className="py-24 flex flex-col items-center justify-center gap-3 text-text-secondary">
             <Loader2 size={32} className="animate-spin text-cyan-secondary" />
             <span className="text-xs">Loading portfolio projects...</span>
@@ -199,6 +269,7 @@ export const Portfolio: React.FC = () => {
             })}
           </div>
         )}
+        </div>
 
       </div>
 

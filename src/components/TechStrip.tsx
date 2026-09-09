@@ -22,8 +22,8 @@ export const TechStrip: React.FC = () => {
           </span>
         </div>
 
-        {/* Responsive Pill Grid / Carousel */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 items-center">
+        {/* Mobile: Responsive Pill Grid (< lg) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 items-center lg:hidden">
           {techPillars.map((pillar) => {
             const Icon = pillar.icon;
             return (
@@ -43,6 +43,31 @@ export const TechStrip: React.FC = () => {
               </div>
             );
           })}
+        </div>
+
+        {/* PC: Infinite Side Scroll Marquee Animation (>= lg) */}
+        <div className="hidden lg:block overflow-hidden relative w-full [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]">
+          <div className="animate-marquee-slow flex items-center gap-4 py-1">
+            {[...techPillars, ...techPillars, ...techPillars, ...techPillars].map((pillar, idx) => {
+              const Icon = pillar.icon;
+              return (
+                <div
+                  key={idx}
+                  className="group flex flex-col items-center justify-center p-3.5 w-48 shrink-0 rounded-2xl bg-white/[0.02] border border-white/[0.05] hover:border-cyan-secondary/30 hover:bg-white/[0.04] transition-all duration-300 shadow-sm"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-bg-elevated/80 flex items-center justify-center text-cyan-secondary group-hover:text-mint-primary group-hover:scale-105 transition-all mb-1.5 border border-white/5">
+                    <Icon size={16} />
+                  </div>
+                  <span className="text-xs font-semibold text-text-primary group-hover:text-cyan-highlight transition-colors text-center whitespace-nowrap">
+                    {pillar.label}
+                  </span>
+                  <span className="text-[10px] text-text-muted font-mono tracking-tight mt-0.5 whitespace-nowrap">
+                    {pillar.highlight}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
       </div>
