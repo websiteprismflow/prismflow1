@@ -29,7 +29,7 @@ const CAPABILITIES = [
 
 export const Hero: React.FC<HeroProps> = ({ onExploreWork, onContactClick }) => {
   return (
-    <section id="hero" className="relative min-h-[auto] sm:min-h-screen pt-28 pb-8 sm:pt-36 sm:pb-24 flex items-center justify-center overflow-hidden bg-ambient-hero">
+    <section id="hero" className="relative min-h-screen pt-28 pb-16 sm:pt-36 sm:pb-24 flex items-center justify-center overflow-hidden bg-ambient-hero">
 
       {/* Background Lighting Gradients (Top Green, Bottom Cyan) */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[650px] sm:w-[900px] h-[350px] bg-gradient-to-b from-mint-primary/10 via-cyan-secondary/5 to-transparent blur-[120px] pointer-events-none -z-10" />
@@ -93,21 +93,21 @@ export const Hero: React.FC<HeroProps> = ({ onExploreWork, onContactClick }) => 
             </div>
 
             {/* Capability Micro-Pills: Infinite Side Scroll Marquee on Mobile Only */}
-            <div className="lg:hidden w-full max-w-sm sm:max-w-md mt-5 pt-3.5 border-t border-white/[0.06] overflow-hidden relative [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
-              <div className="animate-marquee flex items-center gap-2.5 py-0.5">
+            <div className="lg:hidden w-full max-w-sm sm:max-w-md mt-8 pt-6 border-t border-white/[0.06] overflow-hidden relative [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+              <div className="animate-marquee flex items-center gap-3 py-1">
                 {[...CAPABILITIES, ...CAPABILITIES, ...CAPABILITIES, ...CAPABILITIES].map((item, idx) => {
                   const Icon = item.icon;
                   return (
                     <div
                       key={idx}
-                      className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white/[0.035] border border-white/[0.08] shrink-0 backdrop-blur-sm shadow-sm"
+                      className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl bg-white/[0.035] border border-white/[0.08] shrink-0 backdrop-blur-sm shadow-sm"
                     >
-                      <Icon size={13} className={`${item.iconColor} shrink-0`} />
+                      <Icon size={14} className={`${item.iconColor} shrink-0`} />
                       <div className="flex flex-col text-left">
-                        <span className="text-[11px] font-semibold text-text-primary leading-tight whitespace-nowrap">
+                        <span className="text-xs font-semibold text-text-primary leading-tight whitespace-nowrap">
                           {item.title}
                         </span>
-                        <span className="text-[9px] text-text-muted leading-tight whitespace-nowrap">
+                        <span className="text-[10px] text-text-muted leading-tight whitespace-nowrap">
                           {item.subtitle}
                         </span>
                       </div>

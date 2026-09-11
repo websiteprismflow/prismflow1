@@ -7,7 +7,6 @@ import {
   Star, 
   Eye, 
   EyeOff, 
-  ExternalLink, 
   X, 
   AlertTriangle,
   Upload,
@@ -34,7 +33,6 @@ export const AdminTestimonialsPage: React.FC = () => {
   const [title, setTitle] = useState('');
   const [review, setReview] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
-  const [websiteUrl, setWebsiteUrl] = useState('https://');
   const [rating, setRating] = useState<TestimonialRating>(5);
   const [published, setPublished] = useState(true);
 
@@ -64,7 +62,6 @@ export const AdminTestimonialsPage: React.FC = () => {
     setTitle('');
     setReview('');
     setAvatarUrl('');
-    setWebsiteUrl('https://');
     setRating(5);
     setPublished(true);
     setFormError('');
@@ -79,7 +76,6 @@ export const AdminTestimonialsPage: React.FC = () => {
     setTitle(t.title || '');
     setReview(t.client_review_quote || t.review || '');
     setAvatarUrl(t.avatar_image_url || t.profileImage || '');
-    setWebsiteUrl(t.company_website_url || t.websiteUrl || '');
     const cleanRating = ([3, 4, 5].includes(t.rating) ? t.rating : 5) as TestimonialRating;
     setRating(cleanRating);
     setPublished(t.published_live !== undefined ? t.published_live : true);
@@ -136,7 +132,7 @@ export const AdminTestimonialsPage: React.FC = () => {
           rating,
           client_review_quote: review.trim(),
           avatar_image_url: avatarUrl.trim() || null,
-          company_website_url: websiteUrl.trim() || null,
+          company_website_url: editingTestimonial.company_website_url || null,
           published_live: published
         });
 
@@ -155,7 +151,7 @@ export const AdminTestimonialsPage: React.FC = () => {
           rating,
           client_review_quote: review.trim(),
           avatar_image_url: avatarUrl.trim() || null,
-          company_website_url: websiteUrl.trim() || null,
+          company_website_url: null,
           published_live: published
         });
 
@@ -467,20 +463,6 @@ export const AdminTestimonialsPage: React.FC = () => {
                     )}
                   </button>
                 </div>
-              </div>
-
-              {/* Company Website */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
-                  Company Website URL
-                </label>
-                <input
-                  type="url"
-                  value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
-                  placeholder="https://company.com"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-bg-primary border border-white/10 text-xs text-text-primary focus:outline-none focus:border-cyan-secondary"
-                />
               </div>
 
               <div className="pt-2">

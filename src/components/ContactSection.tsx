@@ -13,6 +13,8 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
   const [contact, setContact] = useState('');
   const [whatYouNeed, setWhatYouNeed] = useState('AI Agent');
   const [additionalNotes, setAdditionalNotes] = useState('');
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -54,6 +56,11 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
       return;
     }
 
+    if (!agreePrivacy) {
+      setErrorMessage('Please agree to the Privacy Policy to submit your enquiry.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -75,6 +82,8 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
         setEmail('');
         setContact('');
         setAdditionalNotes('');
+        setAgreePrivacy(false);
+        setMarketingConsent(false);
       } else {
         setErrorMessage(res.error || 'Something went wrong. Please try again.');
       }
@@ -262,6 +271,48 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
                   placeholder="Tell us about your project goals, timelines, or specific technical integrations..."
                   className="w-full px-4 py-3.5 rounded-xl bg-bg-primary/90 border border-white/10 text-text-primary placeholder:text-text-muted text-sm focus:outline-none focus:border-cyan-secondary focus:ring-1 focus:ring-cyan-secondary/50 transition-all resize-none"
                 />
+              </div>
+
+              {/* Consent & Marketing Checkboxes */}
+              <div className="space-y-3 pt-1">
+                {/* Privacy Policy Checkbox (Required) */}
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    id="privacy-consent"
+                    required
+                    checked={agreePrivacy}
+                    onChange={(e) => setAgreePrivacy(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border border-white/20 bg-bg-primary/90 accent-cyan-secondary focus:ring-1 focus:ring-cyan-secondary/50 focus:outline-none cursor-pointer shrink-0"
+                  />
+                  <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors leading-relaxed">
+                    I have read the{' '}
+                    <a
+                      href="/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline text-cyan-secondary hover:text-cyan-highlight"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Privacy Policy
+                    </a>{' '}
+                    and agree that Prism Flow may use my information to respond to my enquiry. <span className="text-red-400">*</span>
+                  </span>
+                </label>
+
+                {/* Marketing Updates Checkbox (Optional) */}
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    id="marketing-consent"
+                    checked={marketingConsent}
+                    onChange={(e) => setMarketingConsent(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border border-white/20 bg-bg-primary/90 accent-cyan-secondary focus:ring-1 focus:ring-cyan-secondary/50 focus:outline-none cursor-pointer shrink-0"
+                  />
+                  <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors leading-relaxed">
+                    I would like to receive updates, offers, and service information from Prism Flow through email, phone, or WhatsApp. I can opt out at any time.
+                  </span>
+                </label>
               </div>
 
               {/* Submit Button */}
