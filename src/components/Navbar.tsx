@@ -85,19 +85,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigateToSection }) => {
             className="flex items-center gap-2.5 cursor-pointer select-none group relative"
             title="Prism Flow (Double-click for Admin Access)"
           >
-            {/* Geometric Prism Icon */}
-            <div className="w-8 h-8 rounded-lg bg-bg-elevated border border-white/10 flex items-center justify-center p-1.5 shadow-sm group-hover:border-cyan-secondary/50 transition-all duration-300">
-              <svg viewBox="0 0 40 40" className="w-full h-full">
-                <defs>
-                  <linearGradient id="logoGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#0077B6" />
-                    <stop offset="50%" stopColor="#18B8C4" />
-                    <stop offset="100%" stopColor="#0F8F9C" />
-                  </linearGradient>
-                </defs>
-                <polygon points="20,4 36,34 4,34" fill="none" stroke="url(#logoGrad)" strokeWidth="4" strokeLinejoin="round" />
-                <circle cx="20" cy="22" r="3.5" fill="#0077B6" />
-              </svg>
+            {/* Brand Logo */}
+            <div className="w-15 h-15 flex items-center justify-center shrink-0 aspect-square">
+              <img 
+                src="/logo.png" 
+                alt="Prism Flow" 
+                className="w-full h-full object-contain" 
+                loading="eager"
+                decoding="sync"
+              />
             </div>
 
             <div className="flex flex-col">

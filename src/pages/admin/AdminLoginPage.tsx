@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Lock, Mail, ArrowLeft, Loader2 } from 'lucide-react';
-import { authService } from '../../services/authService';
+import { ArrowRight, Lock, Mail, ArrowLeft, Loader2, ShieldAlert, Clock } from 'lucide-react';
+import { authService, RateLimitStatus } from '../../services/authService';
 
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -9,10 +9,44 @@ export const AdminLoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rateLimit, setRateLimit] = useState<RateLimitStatus>(() => authService.getRateLimitStatus());
+
+  // 1-hour lockout countdown ticker
+  useEffect(() => {
+    if (!rateLimit.isLocked) return;
+
+    const interval = setInterval(() => {
+      const current = authService.getRateLimitStatus();
+      setRateLimit(current);
+      if (!current.isLocked) {
+        clearInterval(interval);
+        setError('');
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [rateLimit.isLocked]);
+
+  const formatTime = (ms: number): string => {
+    if (ms <= 0) return '0s';
+    const totalSecs = Math.floor(ms / 1000);
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    if (mins > 0) {
+      return `${mins}m ${secs.toString().padStart(2, '0')}s`;
+    }
+    return `${secs}s`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // If rate limit is locked, block immediately
+    if (rateLimit.isLocked) {
+      setError(`Form is locked for ${formatTime(rateLimit.remainingTimeMs)} due to 3 failed attempts.`);
+      return;
+    }
 
     if (!email.trim() || !password) {
       setError('Please enter your administrator email and password.');
@@ -24,14 +58,20 @@ export const AdminLoginPage: React.FC = () => {
     try {
       const res = await authService.login(email, password);
       setLoading(false);
+      const updatedStatus = authService.getRateLimitStatus();
+      setRateLimit(updatedStatus);
 
       if (res.success) {
         navigate('/admin', { replace: true });
       } else {
         setError(res.error || 'Authentication failed. Please verify your credentials.');
+        if (updatedStatus.isLocked) {
+          setPassword('');
+        }
       }
     } catch (err) {
       setLoading(false);
+      setRateLimit(authService.getRateLimitStatus());
       setError('An unexpected error occurred during login. Please try again.');
     }
   };
@@ -56,18 +96,8 @@ export const AdminLoginPage: React.FC = () => {
         
         {/* Header with Logo */}
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-bg-elevated border border-white/10 flex items-center justify-center p-2 shadow-sm mx-auto mb-4">
-            <svg viewBox="0 0 40 40" className="w-full h-full">
-              <defs>
-                <linearGradient id="adminLoginGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#0077B6" />
-                  <stop offset="50%" stopColor="#18B8C4" />
-                  <stop offset="100%" stopColor="#0F8F9C" />
-                </linearGradient>
-              </defs>
-              <polygon points="20,4 36,34 4,34" fill="none" stroke="url(#adminLoginGrad)" strokeWidth="4" strokeLinejoin="round" />
-              <circle cx="20" cy="22" r="3.5" fill="#0077B6" />
-            </svg>
+          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-bg-elevated border border-white/10 flex items-center justify-center shadow-sm mx-auto mb-4">
+            <img src="/logo.png" alt="Prism Flow" className="w-full h-full object-cover" />
           </div>
 
           <h1 className="text-2xl font-bold tracking-tight text-text-primary">
@@ -78,11 +108,41 @@ export const AdminLoginPage: React.FC = () => {
           </p>
         </div>
 
-        {error && (
-          <div className="p-3 mb-6 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs">
-            {error}
+        {/* Security Lockout or Error Banner */}
+        {rateLimit.isLocked ? (
+          <div className="p-4 mb-6 rounded-2xl bg-red-500/15 border border-red-500/40 text-red-200 text-xs flex items-start gap-3 animate-pulse">
+            <ShieldAlert size={20} className="text-red-400 shrink-0 mt-0.5" />
+            <div className="space-y-1 text-left">
+              <p className="font-bold text-red-300 text-sm">Security Lockout Active</p>
+              <p className="text-[11px] text-red-200/90 leading-relaxed">
+                You have reached 3 failed attempts (incorrect email or password). Form inputs are locked for 1 hour to prevent brute-force attacks.
+              </p>
+              <div className="pt-1.5 flex items-center gap-1.5 font-mono text-xs text-mint-secondary font-semibold">
+                <Clock size={13} className="text-mint-secondary" />
+                <span>Time remaining: {formatTime(rateLimit.remainingTimeMs)}</span>
+              </div>
+            </div>
           </div>
-        )}
+        ) : error ? (
+          <div className="p-3.5 mb-6 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-start gap-2.5">
+            <ShieldAlert size={16} className="text-red-400 shrink-0 mt-0.5" />
+            <div className="space-y-0.5 text-left">
+              <span>{error}</span>
+              {rateLimit.attempts > 0 && (
+                <p className="text-[11px] text-amber-300 font-medium">
+                  Failed attempts: {rateLimit.attempts} / {rateLimit.maxAttempts} (Lockout: 1 hour)
+                </p>
+              )}
+            </div>
+          </div>
+        ) : rateLimit.attempts > 0 ? (
+          <div className="p-3 mb-6 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-2">
+            <ShieldAlert size={14} className="text-amber-400 shrink-0" />
+            <span>
+              {rateLimit.remainingAttempts} attempt{rateLimit.remainingAttempts === 1 ? '' : 's'} remaining before a 1-hour security lockout.
+            </span>
+          </div>
+        ) : null}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -94,13 +154,18 @@ export const AdminLoginPage: React.FC = () => {
               <input
                 type="email"
                 required
+                disabled={loading || rateLimit.isLocked}
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@prismflow.tech"
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-bg-primary/90 border border-white/10 text-text-primary text-sm focus:outline-none focus:border-cyan-secondary transition-all"
+                placeholder={rateLimit.isLocked ? "Form locked for 1 hour" : "admin@prismflow.tech"}
+                className={`w-full pl-10 pr-4 py-3 rounded-xl bg-bg-primary/90 border text-text-primary text-sm transition-all ${
+                  rateLimit.isLocked 
+                    ? 'border-red-500/30 opacity-50 cursor-not-allowed bg-red-950/10' 
+                    : 'border-white/10 focus:outline-none focus:border-cyan-secondary'
+                }`}
               />
-              <Mail size={16} className="absolute left-3.5 top-3.5 text-text-muted" />
+              <Mail size={16} className={`absolute left-3.5 top-3.5 ${rateLimit.isLocked ? 'text-red-400/50' : 'text-text-muted'}`} />
             </div>
           </div>
 
@@ -112,22 +177,36 @@ export const AdminLoginPage: React.FC = () => {
               <input
                 type="password"
                 required
+                disabled={loading || rateLimit.isLocked}
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-bg-primary/90 border border-white/10 text-text-primary text-sm focus:outline-none focus:border-cyan-secondary transition-all"
+                placeholder={rateLimit.isLocked ? "Form locked for 1 hour" : "••••••••••••"}
+                className={`w-full pl-10 pr-4 py-3 rounded-xl bg-bg-primary/90 border text-text-primary text-sm transition-all ${
+                  rateLimit.isLocked 
+                    ? 'border-red-500/30 opacity-50 cursor-not-allowed bg-red-950/10' 
+                    : 'border-white/10 focus:outline-none focus:border-cyan-secondary'
+                }`}
               />
-              <Lock size={16} className="absolute left-3.5 top-3.5 text-text-muted" />
+              <Lock size={16} className={`absolute left-3.5 top-3.5 ${rateLimit.isLocked ? 'text-red-400/50' : 'text-text-muted'}`} />
             </div>
           </div>
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-primary to-cyan-secondary text-white font-bold text-sm shadow-cyan-glow hover:opacity-95 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50"
+            disabled={loading || rateLimit.isLocked}
+            className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 mt-2 ${
+              rateLimit.isLocked
+                ? 'bg-red-500/20 border border-red-500/30 text-red-300 cursor-not-allowed opacity-60 shadow-none'
+                : 'bg-gradient-to-r from-cyan-primary to-cyan-secondary text-white shadow-cyan-glow hover:opacity-95 cursor-pointer disabled:opacity-50'
+            }`}
           >
-            {loading ? (
+            {rateLimit.isLocked ? (
+              <span className="inline-flex items-center gap-2">
+                <Clock size={16} />
+                <span>Locked ({formatTime(rateLimit.remainingTimeMs)})</span>
+              </span>
+            ) : loading ? (
               <span className="inline-flex items-center gap-2">
                 <Loader2 size={16} className="animate-spin" />
                 <span>Authenticating...</span>
@@ -143,7 +222,7 @@ export const AdminLoginPage: React.FC = () => {
 
         <div className="mt-6 text-center">
           <p className="text-[11px] text-text-muted">
-            🔒 Protected by Supabase Row-Level Security &amp; public.is_admin()
+            🔒 Rate-limited to 3 attempts • 1-hour security lockout
           </p>
         </div>
 

@@ -151,18 +151,8 @@ export const AdminLayout: React.FC = () => {
         <div>
           {/* Brand Header */}
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-bg-elevated border border-white/10 flex items-center justify-center p-1.5 shadow-sm">
-              <svg viewBox="0 0 40 40" className="w-full h-full">
-                <defs>
-                  <linearGradient id="adminSideGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#0077B6" />
-                    <stop offset="50%" stopColor="#18B8C4" />
-                    <stop offset="100%" stopColor="#0F8F9C" />
-                  </linearGradient>
-                </defs>
-                <polygon points="20,4 36,34 4,34" fill="none" stroke="url(#adminSideGrad)" strokeWidth="4" strokeLinejoin="round" />
-                <circle cx="20" cy="22" r="3.5" fill="#0077B6" />
-              </svg>
+            <div className="w-8 h-8 rounded-lg overflow-hidden bg-bg-elevated border border-white/10 flex items-center justify-center shadow-sm">
+              <img src="/logo.png" alt="Prism Flow" className="w-full h-full object-cover" />
             </div>
             <div>
               <span className="font-bold text-sm tracking-tight text-text-primary block">
@@ -237,11 +227,8 @@ export const AdminLayout: React.FC = () => {
       {/* Mobile Top Header */}
       <header className="md:hidden flex items-center justify-between p-4 bg-bg-secondary border-b border-white/10 sticky top-0 z-40 backdrop-blur-xl">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-bg-elevated border border-white/10 flex items-center justify-center p-1">
-            <svg viewBox="0 0 40 40" className="w-full h-full">
-              <polygon points="20,4 36,34 4,34" fill="none" stroke="#18B8C4" strokeWidth="4" />
-              <circle cx="20" cy="22" r="3.5" fill="#0077B6" />
-            </svg>
+          <div className="w-7 h-7 rounded-lg overflow-hidden bg-bg-elevated border border-white/10 flex items-center justify-center">
+            <img src="/logo.png" alt="Prism Flow" className="w-full h-full object-cover" />
           </div>
           <span className="font-bold text-sm text-text-primary">Admin Center</span>
         </div>

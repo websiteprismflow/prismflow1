@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, CheckCircle, Loader2, Sparkles } from 'lucide-react';
+import { ArrowRight, CheckCircle, Loader2, Sparkles, Clock } from 'lucide-react';
 import { inquiryService, VALID_BUSINESS_TYPES, VALID_WHAT_YOU_NEED } from '../services/inquiryService';
 
 interface ContactSectionProps {
@@ -19,6 +19,30 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [cooldownSeconds, setCooldownSeconds] = useState<number>(() => Math.max(0, Math.ceil(inquiryService.getCooldownRemainingMs() / 1000)));
+
+  // Check initial cooldown on mount
+  useEffect(() => {
+    const remainingMs = inquiryService.getCooldownRemainingMs();
+    const secs = Math.max(0, Math.ceil(remainingMs / 1000));
+    setCooldownSeconds(secs);
+    if (secs > 0) {
+      setSubmitted(true);
+    }
+  }, []);
+
+  // Background 1-minute timer ticker
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+
+    const interval = setInterval(() => {
+      const remainingMs = inquiryService.getCooldownRemainingMs();
+      const secs = Math.max(0, Math.ceil(remainingMs / 1000));
+      setCooldownSeconds(secs);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [cooldownSeconds]);
 
   useEffect(() => {
     if (initialRequirement) {
@@ -77,6 +101,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
 
       if (res.success) {
         setSubmitted(true);
+        setCooldownSeconds(60);
         // Reset form fields
         setName('');
         setEmail('');
@@ -144,16 +169,43 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ initialRequireme
                 Request received. We'll be in touch.
               </h3>
 
-              <p className="text-base text-text-secondary max-w-md mb-8">
+              <p className="text-base text-text-secondary max-w-md mb-6 leading-relaxed">
                 Thank you for reaching out to Prism Flow. Our principal architect will review your project requirements promptly.
               </p>
 
-              <button
-                onClick={() => setSubmitted(false)}
-                className="px-6 py-2.5 rounded-full bg-white/[0.06] border border-white/15 text-text-primary hover:bg-white/[0.1] text-xs font-semibold transition-all cursor-pointer"
-              >
-                Submit Another Request
-              </button>
+              {/* Message to wait a few minutes with background 1-minute countdown timer */}
+              <div className="mb-8 p-3.5 px-5 rounded-2xl bg-white/[0.03] border border-white/10 max-w-md w-full flex items-center justify-between gap-3 text-left">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Clock size={16} className={cooldownSeconds > 0 ? "text-cyan-secondary shrink-0 animate-pulse" : "text-mint-primary shrink-0"} />
+                  <span className="text-xs text-text-secondary leading-normal">
+                    {cooldownSeconds > 0 
+                      ? "To fill the form again, please wait a few minutes."
+                      : "You can now fill and submit another inquiry."}
+                  </span>
+                </div>
+                {cooldownSeconds > 0 && (
+                  <span className="font-mono text-xs font-semibold text-cyan-highlight whitespace-nowrap px-2.5 py-1 rounded-lg bg-cyan-primary/20 border border-cyan-secondary/30 shrink-0">
+                    {cooldownSeconds}s
+                  </span>
+                )}
+              </div>
+
+              {cooldownSeconds > 0 ? (
+                <button
+                  disabled
+                  className="px-6 py-2.5 rounded-full bg-white/[0.03] border border-white/10 text-text-muted text-xs font-semibold cursor-not-allowed opacity-50 flex items-center gap-2"
+                >
+                  <Clock size={13} />
+                  <span>Please wait ({cooldownSeconds}s)</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setSubmitted(false)}
+                  className="px-6 py-2.5 rounded-full bg-white/[0.06] border border-white/15 text-text-primary hover:bg-white/[0.1] text-xs font-semibold transition-all cursor-pointer"
+                >
+                  Submit Another Request
+                </button>
+              )}
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">

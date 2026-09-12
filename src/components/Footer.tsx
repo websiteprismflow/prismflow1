@@ -51,18 +51,8 @@ export const Footer: React.FC = () => {
               className="flex items-center gap-2.5 cursor-pointer select-none group relative mb-4"
               title="Prism Flow (Double-click for Admin Access)"
             >
-              <div className="w-8 h-8 rounded-lg bg-bg-elevated border border-white/10 flex items-center justify-center p-1.5 shadow-sm group-hover:border-cyan-secondary/50 transition-all">
-                <svg viewBox="0 0 40 40" className="w-full h-full">
-                  <defs>
-                    <linearGradient id="footerLogoGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="#0077B6" />
-                      <stop offset="50%" stopColor="#18B8C4" />
-                      <stop offset="100%" stopColor="#0F8F9C" />
-                    </linearGradient>
-                  </defs>
-                  <polygon points="20,4 36,34 4,34" fill="none" stroke="url(#footerLogoGrad)" strokeWidth="4" strokeLinejoin="round" />
-                  <circle cx="20" cy="22" r="3.5" fill="#0077B6" />
-                </svg>
+              <div className="w-8 h-8 rounded-lg overflow-hidden bg-bg-elevated border border-white/10 flex items-center justify-center shadow-sm group-hover:border-cyan-secondary/50 transition-all">
+                <img src="/logo.png" alt="Prism Flow" className="w-full h-full object-cover" />
               </div>
 
               <span className="font-bold tracking-tight text-text-primary text-lg">

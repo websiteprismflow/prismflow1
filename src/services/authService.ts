@@ -1,7 +1,136 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { AdminUser } from '../types';
 
+export interface RateLimitStatus {
+  isLocked: boolean;
+  attempts: number;
+  maxAttempts: number;
+  remainingAttempts: number;
+  lockoutUntil: number | null;
+  remainingTimeMs: number;
+}
+
+const RATE_LIMIT_KEY = 'prism_admin_rate_limit';
+const MAX_LOGIN_ATTEMPTS = 3;
+const LOCKOUT_DURATION_MS = 60 * 60 * 1000; // 1 hour
+
 export const authService = {
+  /**
+   * Get current rate limit and lockout status
+   */
+  getRateLimitStatus: (): RateLimitStatus => {
+    try {
+      const raw = localStorage.getItem(RATE_LIMIT_KEY);
+      if (!raw) {
+        return {
+          isLocked: false,
+          attempts: 0,
+          maxAttempts: MAX_LOGIN_ATTEMPTS,
+          remainingAttempts: MAX_LOGIN_ATTEMPTS,
+          lockoutUntil: null,
+          remainingTimeMs: 0
+        };
+      }
+
+      const data = JSON.parse(raw);
+      const now = Date.now();
+
+      // Check active lockout
+      if (data.lockoutUntil && now < data.lockoutUntil) {
+        return {
+          isLocked: true,
+          attempts: data.attempts || MAX_LOGIN_ATTEMPTS,
+          maxAttempts: MAX_LOGIN_ATTEMPTS,
+          remainingAttempts: 0,
+          lockoutUntil: data.lockoutUntil,
+          remainingTimeMs: data.lockoutUntil - now
+        };
+      }
+
+      // Expired lockout - reset automatically
+      if (data.lockoutUntil && now >= data.lockoutUntil) {
+        localStorage.removeItem(RATE_LIMIT_KEY);
+        return {
+          isLocked: false,
+          attempts: 0,
+          maxAttempts: MAX_LOGIN_ATTEMPTS,
+          remainingAttempts: MAX_LOGIN_ATTEMPTS,
+          lockoutUntil: null,
+          remainingTimeMs: 0
+        };
+      }
+
+      const attempts = data.attempts || 0;
+      return {
+        isLocked: false,
+        attempts,
+        maxAttempts: MAX_LOGIN_ATTEMPTS,
+        remainingAttempts: Math.max(0, MAX_LOGIN_ATTEMPTS - attempts),
+        lockoutUntil: null,
+        remainingTimeMs: 0
+      };
+    } catch {
+      return {
+        isLocked: false,
+        attempts: 0,
+        maxAttempts: MAX_LOGIN_ATTEMPTS,
+        remainingAttempts: MAX_LOGIN_ATTEMPTS,
+        lockoutUntil: null,
+        remainingTimeMs: 0
+      };
+    }
+  },
+
+  /**
+   * Record a failed credential attempt and lock for 1 hr if threshold reached
+   */
+  recordFailedAttempt: (): RateLimitStatus => {
+    const current = authService.getRateLimitStatus();
+    const newAttempts = current.attempts + 1;
+    const now = Date.now();
+
+    if (newAttempts >= MAX_LOGIN_ATTEMPTS) {
+      const lockoutUntil = now + LOCKOUT_DURATION_MS;
+      const data = { attempts: newAttempts, lockoutUntil };
+      try {
+        localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(data));
+      } catch (err) {
+        console.error('Failed to store rate limit lockout:', err);
+      }
+      return {
+        isLocked: true,
+        attempts: newAttempts,
+        maxAttempts: MAX_LOGIN_ATTEMPTS,
+        remainingAttempts: 0,
+        lockoutUntil,
+        remainingTimeMs: LOCKOUT_DURATION_MS
+      };
+    } else {
+      const data = { attempts: newAttempts, lockoutUntil: null };
+      try {
+        localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(data));
+      } catch (err) {
+        console.error('Failed to store rate limit attempt:', err);
+      }
+      return {
+        isLocked: false,
+        attempts: newAttempts,
+        maxAttempts: MAX_LOGIN_ATTEMPTS,
+        remainingAttempts: MAX_LOGIN_ATTEMPTS - newAttempts,
+        lockoutUntil: null,
+        remainingTimeMs: 0
+      };
+    }
+  },
+
+  /**
+   * Reset rate limit upon successful authentication or admin clearing
+   */
+  resetRateLimit: (): void => {
+    try {
+      localStorage.removeItem(RATE_LIMIT_KEY);
+    } catch (e) {}
+  },
   /**
    * Get the current authenticated Supabase user session
    */
@@ -99,6 +228,16 @@ export const authService = {
    * Sign in using Supabase Auth
    */
   login: async (email: string, pass: string): Promise<{ success: boolean; user?: AdminUser; error?: string }> => {
+    // 1. Check rate limit lockout first
+    const rateLimit = authService.getRateLimitStatus();
+    if (rateLimit.isLocked) {
+      const remainingMinutes = Math.max(1, Math.ceil(rateLimit.remainingTimeMs / 60000));
+      return {
+        success: false,
+        error: `Security Lockout: 3 failed attempts reached. Access is locked for approximately ${remainingMinutes} minute(s).`
+      };
+    }
+
     if (!isSupabaseConfigured()) {
       return { 
         success: false, 
@@ -113,9 +252,17 @@ export const authService = {
       });
 
       if (error || !data.user) {
+        // Record failed attempt
+        const updatedRateLimit = authService.recordFailedAttempt();
+        if (updatedRateLimit.isLocked) {
+          return {
+            success: false,
+            error: 'Maximum of 3 failed attempts reached. For security, access has been locked for 1 hour.'
+          };
+        }
         return { 
           success: false, 
-          error: error?.message || 'Invalid email or password. Please try again.' 
+          error: `Invalid email or password. (${updatedRateLimit.remainingAttempts} attempt${updatedRateLimit.remainingAttempts === 1 ? '' : 's'} remaining before 1-hour security lockout)` 
         };
       }
 
@@ -127,6 +274,9 @@ export const authService = {
           error: 'Access Denied: Your account is authenticated but does not possess administrator privileges.'
         };
       }
+
+      // Successful login resets rate limit counter
+      authService.resetRateLimit();
 
       return {
         success: true,

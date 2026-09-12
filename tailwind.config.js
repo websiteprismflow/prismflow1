@@ -7,6 +7,9 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      spacing: {
+        '15': '3.75rem',
+      },
       colors: {
         bg: {
           primary: '#050505',

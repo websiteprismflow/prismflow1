@@ -42,7 +42,38 @@ export interface InquiryPaginationResult {
   totalPages: number;
 }
 
+const INQUIRY_COOLDOWN_KEY = 'prism_inquiry_cooldown';
+const INQUIRY_COOLDOWN_MS = 60 * 1000; // 1 minute
+
 export const inquiryService = {
+  /**
+   * Get remaining milliseconds for 1-minute inquiry submission cooldown
+   */
+  getCooldownRemainingMs: (): number => {
+    try {
+      const raw = localStorage.getItem(INQUIRY_COOLDOWN_KEY);
+      if (!raw) return 0;
+      const until = parseInt(raw, 10);
+      const remaining = until - Date.now();
+      if (remaining <= 0) {
+        localStorage.removeItem(INQUIRY_COOLDOWN_KEY);
+        return 0;
+      }
+      return remaining;
+    } catch {
+      return 0;
+    }
+  },
+
+  /**
+   * Set 1-minute inquiry submission cooldown
+   */
+  setCooldown: (): void => {
+    try {
+      localStorage.setItem(INQUIRY_COOLDOWN_KEY, (Date.now() + INQUIRY_COOLDOWN_MS).toString());
+    } catch {}
+  },
+
   /**
    * Submit a new public inquiry.
    * Enforces status = 'Pending' and validates input fields.
@@ -55,6 +86,16 @@ export const inquiryService = {
     what_you_need: string;
     additional_requirement?: string;
   }): Promise<{ success: boolean; error?: string }> => {
+    // Check 1-minute cooldown
+    const cooldownMs = inquiryService.getCooldownRemainingMs();
+    if (cooldownMs > 0) {
+      const seconds = Math.ceil(cooldownMs / 1000);
+      return {
+        success: false,
+        error: `Please wait ${seconds} second(s) before submitting another inquiry.`
+      };
+    }
+
     // 1. Validation
     const name = data.name?.trim();
     const email = data.email?.trim().toLowerCase();
@@ -100,6 +141,8 @@ export const inquiryService = {
         return { success: false, error: 'Unable to submit your inquiry at this moment. Please try again.' };
       }
 
+      // Set 1-minute cooldown timer in background
+      inquiryService.setCooldown();
       return { success: true };
     } catch (err) {
       console.error('PrismFlow inquiryService exception:', err);
